@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Constancias CCHL</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&family=Fira+Code:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <!-- CDNs para parsing y creación de documentos local en navegador -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.4/dist/pizzip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.37.11/build/docxtemplater.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/file-saver/2.0.5/FileSaver.min.js"></script>
+
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+
+    <!-- Ambient glowing backgrounds -->
+    <div class="glow-circle glow-1"></div>
+    <div class="glow-circle glow-2"></div>
+
+    <div class="container">
+
+        <!-- App Header -->
+        <header class="app-header" style="position: relative;">
+            <button class="btn btn-secondary" onclick="document.getElementById('help-modal').style.display='flex'"
+                style="position: absolute; right: 0; top: 0; border-radius: 50%; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; background: rgba(0, 176, 80, 0.15); border-color: rgba(0, 176, 80, 0.3); color: #00b050;"
+                title="Manual de Usuario">?</button>
+            <div
+                style="display:inline-flex; align-items:center; gap:8px; margin-bottom: 8px; background: rgba(0, 176, 80, 0.1); border: 1px solid rgba(0, 176, 80, 0.2); padding: 4px 12px; border-radius: 20px;">
+                <span class="status-dot active" style="background:#00b050; box-shadow: 0 0 6px #00b050;"></span>
+                <span
+                    style="font-size:10px; font-weight:700; color:#34d399; letter-spacing:1px; text-transform:uppercase;">CFE
+                    - CAPACITACIÓN</span>
+            </div>
+            <h1>Generador de Constancias CCHL</h1>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="tabs">
+            <button class="tab-btn active" onclick="switchTab('tab-load')">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z" />
+                </svg>
+                1. Cargar Archivos
+            </button>
+            <button class="tab-btn" onclick="switchTab('tab-generate')" id="nav-btn-generate">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+                </svg>
+                2. Generador CCHL
+            </button>
+            <button class="tab-btn" onclick="switchTab('tab-config')">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0-.44-.17-.47-.41l-.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+                </svg>
+                3. Configuración y Catálogos
+            </button>
+        </nav>
+
+        <!-- PANEL 1: LOAD FILES -->
+        <div id="tab-load" class="panel active panel-split">
+            <div class="card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z" />
+                    </svg>
+                    Cargar Bases de Datos Generales
+                </div>
+
+                <div class="info-block">
+                    <strong>Instrucciones de Carga:</strong> Sube los archivos de control para inicializar el
+                    generador:
+                    <ul>
+                        <li><strong>1. Archivo de Créditos (Hojas CAPPA / CAPPI) (.xlsx):</strong> Obtiene la lista de
+                            trabajadores, RPE, CURP, puesto y los cursos obligatorios desde las hojas <code>CAPPA</code>
+                            y <code>CAPPI</code>.</li>
+                        <li><strong>2. Plantilla de Word CCHL (.docx):</strong> Archivo original
+                            <code>CCHL MODIFICABLE.docx</code> con
+                            etiquetas <code>«...»</code>. (Se preservan logos y formatos).
+                        </li>
+                    </ul>
+                    <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
+                        <button class="btn btn-secondary" onclick="resetDatabaseAction()"
+                            style="padding: 6px 12px; font-size: 11px; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: #fca5a5;">
+                            Resetear Base de Datos (Limpiar Memoria)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>1. Archivo de Créditos (Hojas CAPPA / CAPPI) (.xlsx)</label>
+                        <div class="upload-zone" id="zone-courses">
+                            <svg class="upload-icon" viewBox="0 0 24 24">
+                                <path
+                                    d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+                            </svg>
+                            <p class="desc">Arrastra el archivo de Créditos (CAPPA/CAPPI) o haz clic para buscar</p>
+                            <input type="file" id="input-courses" class="file-input" accept=".xlsx, .xls">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>2. Plantilla de Word CCHL (.docx)</label>
+                        <div class="upload-zone" id="zone-template">
+                            <svg class="upload-icon" viewBox="0 0 24 24">
+                                <path
+                                    d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+                            </svg>
+                            <p class="desc">Arrastra la plantilla CCHL MODIFICABLE.docx</p>
+                            <input type="file" id="input-template" class="file-input" accept=".docx">
+                        </div>
+                        <div id="detected-tags-label"
+                            style="display:none; margin-top:10px; font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">
+                            Variables Detectadas en Plantilla:</div>
+                        <div id="detected-tags-container"
+                            style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; max-height:80px; overflow-y:auto; padding:5px; background:rgba(0,0,0,0.15); border-radius:8px; border:1px solid var(--glass-border);">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42C16.07 4.74 14.12 4 12 4c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" />
+                    </svg>
+                    Archivos KARDEX de Calificaciones
+                </div>
+
+                <div class="info-block">
+                    <strong>Fecha de Término de Cursos:</strong> Sube de manera masiva los archivos Excel individuales
+                    de los trabajadores (se procesan de las columnas C y H, eliminando numeración en el nombre del
+                    curso):
+                    <br><br>
+                    El nombre de cada archivo Excel debe contener el nombre del trabajador (ej.
+                    <code>BALDOMERO CORTEZ LARA.xlsx</code>).
+                </div>
+
+                <div class="form-group" style="flex: 1;">
+                    <label>Subir Archivos de Kardex (.xlsx)</label>
+                    <div class="upload-zone" id="zone-worker-history" style="height: 180px; justify-content: center;">
+                        <svg class="upload-icon" viewBox="0 0 24 24">
+                            <path
+                                d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" />
+                        </svg>
+                        <p class="desc">Arrastra MÚLTIPLES archivos de Kardex o haz clic</p>
+                        <input type="file" id="input-worker-history" class="file-input" accept=".xlsx, .xls" multiple>
+                    </div>
+                </div>
+
+                <div class="status-pill" style="align-self: flex-start;">
+                    <div class="status-dot" id="status-dot-history"></div>
+                    <span id="status-text-history">0 archivos de Kardex cargados</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL 2: GENERATE DC-3 (THREE-COLUMN DASHBOARD) -->
+        <div id="tab-generate" class="panel">
+
+            <!-- Column 1: Sidebar (Workers List) -->
+            <div class="card sidebar-column" style="gap:12px;">
+                <div class="card-title"
+                    style="border-bottom:none; padding-bottom:0; display: flex; align-items: center; width: 100%;">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+                    </svg>
+                    <span>Trabajadores</span>
+                    <span id="worker-count-badge" class="badge badge-success"
+                        style="font-size: 11px; margin-left: auto; padding: 2px 8px; font-family: var(--font-outfit);">0</span>
+                </div>
+
+                <div class="filter-controls">
+                    <input type="text" id="search-worker-list" class="input-control"
+                        placeholder="Buscar por nombre o RPE...">
+                    <div style="display:flex; flex-direction:column; gap:6px; margin-top:6px;">
+                        <span
+                            style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Filtrar
+                            por Letra Inicial:</span>
+                        <div id="alphabet-grid"
+                            style="display:grid; grid-template-columns: repeat(7, 1fr); gap: 4px; background: rgba(0,0,0,0.15); padding: 6px; border-radius: 8px; border: 1px solid var(--glass-border);">
+                            <!-- Generado por JS -->
+                        </div>
+                        <div style="display:flex; gap:4px; margin-top:2px;">
+                            <button class="btn btn-secondary"
+                                style="padding: 4px 6px; font-size: 9px; flex: 1; min-height: 20px;"
+                                onclick="setLetterPreset('all')">Todos</button>
+                            <button class="btn btn-secondary"
+                                style="padding: 4px 6px; font-size: 9px; flex: 1; min-height: 20px;"
+                                onclick="setLetterPreset('none')">Limpiar</button>
+                        </div>
+                        <div
+                            style="display:flex; gap:10px; margin-top:4px; border-top:1px solid rgba(255,255,255,0.05); padding-top:6px;">
+                            <select id="filter-status-select" class="input-control"
+                                style="padding: 6px 12px; font-size:11px;" onchange="renderWorkerList()">
+                                <option value="all">Ver Todos</option>
+                                <option value="pending">Solo Pendientes</option>
+                                <option value="completed">Solo Completados</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="worker-list-scroll" id="worker-list-items">
+                    <div
+                        style="text-align: center; color: var(--text-muted); font-style: italic; padding: 20px 0; font-size:12px;">
+                        Carga el archivo CONSAP o de Créditos para listar...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column 2: Center Panel (Details & Courses) -->
+            <div class="card center-column" style="flex:1; min-width:0;">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+                    </svg>
+                    Detalles y Cursos
+                </div>
+
+                <div id="worker-active-details"
+                    style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--glass-border); padding: 12px 16px; border-radius: 10px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; font-size: 13px;">
+                        <div
+                            style="grid-column: span 2; display:flex; justify-content:space-between; align-items:center;">
+                            <h3 id="act-worker-name"
+                                style="font-size:18px; font-weight:700; color:#fff; font-family:var(--font-outfit);">
+                                SELECCIONA UN TRABAJADOR</h3>
+                            <span class="badge" id="act-worker-rpe-badge"
+                                style="background:var(--primary-glow); color:var(--primary); font-family:monospace; font-size:12px;">RPE:
+                                --</span>
+                        </div>
+                        <div>
+                            <span
+                                style="color:var(--text-muted); font-weight:600; display:block; margin-bottom:2px; font-size:11px; text-transform:uppercase;">CURP:</span>
+                            <span id="act-worker-curp"
+                                style="font-family:monospace; font-size:14.5px; font-weight:700; letter-spacing:0.5px;">--</span>
+                            <div id="act-worker-curp-error"
+                                style="color: var(--danger); font-size: 10px; font-weight: 600; margin-top: 2px; display: none;">
+                                CURP Inválido (debe tener 18 caracteres)</div>
+                        </div>
+                        <div>
+                            <span
+                                style="color:var(--text-muted); font-weight:600; display:block; margin-bottom:2px; font-size:11px; text-transform:uppercase;">Número
+                                de Puesto:</span>
+                            <input type="text" id="act-worker-puesto-num" class="input-control"
+                                style="padding:5px 10px; font-size:13px; font-weight:700; color:var(--accent);"
+                                placeholder="Ej. 464020200">
+                            <div id="act-worker-puesto-error"
+                                style="color: var(--danger); font-size: 10px; font-weight: 600; margin-top: 2px; display: none;">
+                                Debe ser numérico</div>
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <span
+                                style="color:var(--text-muted); font-weight:600; display:block; margin-bottom:2px; font-size:11px; text-transform:uppercase;">Puesto
+                                Actual (CAPPA):</span>
+                            <span id="act-worker-cappa"
+                                style="font-weight:600; color:#ffffff; font-size:13.5px;">--</span>
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <span
+                                style="color:var(--text-muted); font-weight:600; display:block; margin-bottom:2px; font-size:11px; text-transform:uppercase;">Puesto
+                                Inmediato (CAPPI):</span>
+                            <span id="act-worker-cappi"
+                                style="font-weight:600; color:#ffffff; font-size:13.5px;">--</span>
+                        </div>
+                        <div
+                            style="grid-column: span 2; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px; margin-top:5px; display:flex; flex-direction:column; gap:8px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <label class="checkbox-container" style="font-weight:600; font-size:13px;">
+                                    <input type="checkbox" id="act-worker-completed-checkbox"
+                                        onchange="toggleWorkerCompletedStatus()">
+                                    <span class="checkmark"></span>
+                                    Expediente Completo / Carpeta Generada
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:8px; align-items:stretch;">
+                    <div
+                        style="display:flex; gap:8px; align-items:center; background: rgba(15, 23, 42, 0.3); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--glass-border); flex: 1;">
+                        <svg viewBox="0 0 24 24"
+                            style="width: 13px; height: 13px; fill: var(--text-muted); flex-shrink:0;">
+                            <path
+                                d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+                        </svg>
+                        <input type="text" id="search-courses-input" class="input-control"
+                            placeholder="Buscar curso de este trabajador..." oninput="filterCoursesTable()"
+                            style="padding: 2px 4px; font-size: 12.5px; border:none; background:transparent; width:100%; height:auto;">
+                    </div>
+                    <button class="btn btn-secondary" onclick="toggleManualCourseForm(true)" id="btn-add-manual-course"
+                        style="padding: 0 12px; font-size: 12px; flex-shrink:0; text-transform:none;" disabled>
+                        + Agregar Curso Manual
+                    </button>
+                </div>
+
+                <!-- Formulario Agregar Curso Manualmente -->
+                <div id="manual-course-form-container"
+                    style="display:none; background: rgba(15, 23, 42, 0.4); border: 1px solid var(--glass-border); padding: 12px; border-radius: 10px; flex-direction: column; gap: 8px;">
+                    <h4
+                        style="font-size: 12px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px;">
+                        <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; fill: var(--primary);">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                        </svg>
+                        Agregar Curso Manualmente
+                    </h4>
+                    <div style="display: grid; grid-template-columns: 2fr 0.8fr 1.2fr; gap: 8px;">
+                        <div class="form-group">
+                            <label for="manual-c-name" style="font-size: 9px;">Nombre del Curso</label>
+                            <input type="text" id="manual-c-name" class="input-control"
+                                style="padding: 6px 10px; font-size:12px;"
+                                placeholder="Ej. SEGURIDAD EN TRABAJOS CON TIERRA">
+                        </div>
+                        <div class="form-group">
+                            <label for="manual-c-hours" style="font-size: 9px;">Horas</label>
+                            <input type="number" id="manual-c-hours" class="input-control"
+                                style="padding: 6px 10px; font-size:12px;" value="8" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="manual-c-type" style="font-size: 9px;">Tipo Puesto</label>
+                            <select id="manual-c-type" class="input-control" style="padding: 6px 10px; font-size:12px;">
+                                <option value="CAPPA">CAPPA (Puesto Act.)</option>
+                                <option value="CAPPI">CAPPI (Puesto Inm.)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1.5fr 2.5fr; gap: 8px; margin-top: 4px;">
+                        <div class="form-group">
+                            <label for="manual-c-date" style="font-size: 9px;">Fecha de Término (Opcional)</label>
+                            <input type="date" id="manual-c-date" class="input-control"
+                                style="padding: 6px 10px; font-size:12px;">
+                        </div>
+                        <div class="form-group">
+                            <label for="manual-c-instructor" style="font-size: 9px;">Instructor (Opcional)</label>
+                            <select id="manual-c-instructor" class="input-control"
+                                style="padding: 6px 10px; font-size:12px;">
+                                <option value="random">Aleatorio (Selección automática)</option>
+                                <!-- Se llenará dinámicamente -->
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
+                        <button class="btn btn-secondary" onclick="toggleManualCourseForm(false)"
+                            style="padding: 6px 12px; font-size: 11px;">Cancelar</button>
+                        <button class="btn" onclick="addManualCourse()"
+                            style="padding: 6px 12px; font-size: 11px;">Agregar Curso</button>
+                    </div>
+                </div>
+
+                <div class="table-container" style="flex: 1; overflow-y: auto; min-height: 120px;">
+                    <table id="table-courses-dashboard">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px; text-align:center;">Imprimir</th>
+                                <th>Curso Requerido (CREDITOS)</th>
+                                <th style="width: 85px;">Puesto</th>
+                                <th style="width: 65px; text-align:center;">Horas</th>
+                                <th style="width: 155px;">Instructor</th>
+                                <th style="width: 125px;">F. Término (Kardex)</th>
+                                <th style="width: 110px;">F. Inicio (Hábiles)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-courses-dashboard-body">
+                            <tr>
+                                <td colspan="7"
+                                    style="text-align: center; color: var(--text-muted); font-style: italic; padding: 20px 0;">
+                                    Selecciona un trabajador del panel izquierdo...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="center-panel-actions"
+                    style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div style="font-size:11px; color:var(--text-muted);">
+                        Cursos a imprimir: <span id="dash-selected-courses-count"
+                            style="font-weight:bold; color:var(--primary);">0</span>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-secondary" onclick="generateRandomDatesForEmptyCourses()"
+                            style="text-transform:none; padding:8px 12px; font-size:12px;">
+                            <svg viewBox="0 0 24 24"
+                                style="width: 14px; height: 14px; fill: currentColor; display: inline-block; vertical-align: middle; margin-right: 4px;">
+                                <path
+                                    d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z" />
+                            </svg>
+                            Fechas Aleatorias a Vacíos
+                        </button>
+                        <button class="btn btn-accent" id="btn-generate-single" onclick="generateMergedDocument()"
+                            disabled style="text-transform:none; padding:8px 12px; font-size:12px;">
+                            <svg viewBox="0 0 24 24"
+                                style="width: 14px; height: 14px; fill: currentColor; display: inline-block; vertical-align: middle; margin-right: 4px;">
+                                <path
+                                    d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+                            </svg>
+                            Guardar en Word (.docx)
+                        </button>
+                    </div>
+                </div>
+
+
+            </div>
+
+            <!-- Column 3: Right Panel (Live Preview) -->
+            <div class="card dc3-preview-card">
+                <div class="card-title"
+                    style="justify-content: space-between; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px; margin-bottom:0;">
+                    <div style="display: flex; align-items: center; gap: 6px; font-size:14px;">
+                        <svg viewBox="0 0 24 24" style="width:18px; height:18px;">
+                            <path
+                                d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                        </svg>
+                        Previsualización DC-3
+                    </div>
+                    <span id="preview-course-type" class="badge badge-success"
+                        style="font-size:9px; padding:1px 6px;">--</span>
+                </div>
+
+                <div class="dc3-preview-container" style="flex: 1; overflow-y: auto; padding-right: 4px;">
+                    <div class="dc3-page">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px;">
+                            <!-- CFE Logo -->
+                            <div style="width: 80px; text-align: center;">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Logo_de_la_CFE.svg/320px-Logo_de_la_CFE.svg.png"
+                                    alt="CFE" style="width: 100%; height: auto;"
+                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <div
+                                    style="display:none; color: #008f3f; font-weight: 900; font-style: italic; font-size: 26px; line-height: 1; font-family: Arial, sans-serif;">
+                                    CFE
+                                    <div
+                                        style="font-size: 6px; font-weight: normal; font-style: normal; margin-top: 2px; color: #008f3f;">
+                                        Comisión Federal de Electricidad</div>
+                                </div>
+                            </div>
+
+                            <!-- Titles -->
+                            <div style="flex: 1; text-align: center; padding: 0 10px;">
+                                <h2 style="margin: 0 0 3px 0; font-size: 12px; font-weight: bold; color: #000;">FORMATO
+                                    DC-3</h2>
+                                <h3
+                                    style="margin: 0; font-size: 10px; font-weight: bold; color: #000; text-transform: uppercase;">
+                                    CONSTANCIA DE COMPETENCIAS O DE HABILIDADES LABORALES</h3>
+                            </div>
+
+                            <!-- SUTERM Logo -->
+                            <div style="width: 60px;">
+                                <img src="https://framework-gb.cdn.gob.mx/landing/img/suterm.png" alt="SUTERM"
+                                    style="width: 100%; height: auto;"
+                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div
+                                    style="display:none; background: #e31837; border: 2px solid #ffcc00; padding: 4px; flex-direction: column; align-items: flex-end; color: white; font-family: Arial, sans-serif;">
+                                    <div
+                                        style="background: black; border-radius: 50%; width: 12px; height: 12px; display: flex; align-items: center; justify-content: center; font-size: 7px; margin-bottom: 2px; align-self: flex-start; color: white;">
+                                        ⚙️</div>
+                                    <div style="font-weight: bold; font-size: 11px; letter-spacing: -0.5px;">Suterm
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Datos del Trabajador -->
+                        <div class="dc3-section">
+                            <div class="dc3-section-title">DATOS DEL TRABAJADOR</div>
+                            <div class="dc3-row">
+                                <div class="dc3-label">Nombre (Anotar apellido paterno, materno y nombre (s))</div>
+                                <div class="dc3-val" id="prev-worker-name" style="font-size:9.5px;">--</div>
+                            </div>
+                            <div class="dc3-columns-grid">
+                                <div>
+                                    <div class="dc3-label">Clave Única de Registro de Población (CURP)</div>
+                                    <div class="dc3-boxes" id="prev-curp-boxes">
+                                        <!-- 18 Boxes -->
+                                        <div class="dc3-box"></div>
+                                        <div class="dc3-box"></div>
+                                        <div class="dc3-box"></div>
+                                        <div class="dc3-box"></div>
+                                        <div class="dc3-box"></div>
+                                        <div class="dc3-box"></div>
+                                        <div class="dc3-box"></div>
+                                        <div class="dc3-box"></div>
+                                        <div class="dc3-box"></div>
+                                        <div class="dc3-box"></div>
+                                        <div class="dc3-box"></div>
+                                        <div class="dc3-box"></div>
+                                        <div class="dc3-box"></div>
+                                        <div class="dc3-box"></div>
+                                        <div class="dc3-box"></div>
+                                        <div class="dc3-box"></div>
+                                        <div class="dc3-box"></div>
+                                        <div class="dc3-box"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="dc3-label">Ocupación específica (Catálogo Nacional)</div>
+                                    <div class="dc3-val" style="font-size: 8px; line-height: 1.1;" id="prev-occupation">
+                                        --</div>
+                                </div>
+                            </div>
+                            <div class="dc3-row">
+                                <div class="dc3-label">Puesto</div>
+                                <div class="dc3-val" style="font-size:9.5px;" id="prev-puesto">--</div>
+                            </div>
+                        </div>
+
+                        <!-- Datos de la Empresa -->
+                        <div class="dc3-section">
+                            <div class="dc3-section-title">DATOS DE LA EMPRESA</div>
+                            <div class="dc3-row">
+                                <div class="dc3-label">Nombre o Razón Social</div>
+                                <div class="dc3-val" style="font-size:9.5px;" id="prev-company-name">COMISIÓN FEDERAL DE
+                                    ELECTRICIDAD</div>
+                            </div>
+                            <div class="dc3-row">
+                                <div class="dc3-label">Registro Federal de Contribuyentes con homoclave (RFC)</div>
+                                <div class="dc3-boxes" id="prev-rfc-boxes">
+                                    <div class="dc3-box">C</div>
+                                    <div class="dc3-box">F</div>
+                                    <div class="dc3-box">E</div>
+                                    <div class="dc3-box spacer">-</div>
+                                    <div class="dc3-box">3</div>
+                                    <div class="dc3-box">7</div>
+                                    <div class="dc3-box">0</div>
+                                    <div class="dc3-box">8</div>
+                                    <div class="dc3-box">1</div>
+                                    <div class="dc3-box">4</div>
+                                    <div class="dc3-box spacer">-</div>
+                                    <div class="dc3-box">Q</div>
+                                    <div class="dc3-box">I</div>
+                                    <div class="dc3-box">0</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Datos del Programa de Capacitación -->
+                        <div class="dc3-section">
+                            <div class="dc3-section-title">DATOS DEL PROGRAMA DE CAPACITACIÓN</div>
+                            <div class="dc3-row">
+                                <div class="dc3-label">Nombre del curso</div>
+                                <div class="dc3-val" style="font-size:9.5px; font-weight:800; line-height:1.1;"
+                                    id="prev-course-name">--</div>
+                            </div>
+                            <div class="dc3-columns-grid" style="grid-template-columns: 0.8fr 2fr;">
+                                <div>
+                                    <div class="dc3-label">Duración en horas</div>
+                                    <div class="dc3-val" id="prev-course-hours" style="font-size:9.5px;">--</div>
+                                </div>
+                                <div>
+                                    <div class="dc3-label">Periodo de ejecución: De (Año/Mes/Día) a (Año/Mes/Día)</div>
+                                    <div style="display: flex; align-items: center; gap: 4px; margin-top:2px;">
+                                        <div class="dc3-label" style="font-size: 6px;">De:</div>
+                                        <div class="dc3-boxes" id="prev-start-date-boxes">
+                                            <div class="dc3-box"></div>
+                                            <div class="dc3-box"></div>
+                                            <div class="dc3-box"></div>
+                                            <div class="dc3-box"></div>
+                                            <div class="dc3-box spacer">/</div>
+                                            <div class="dc3-box"></div>
+                                            <div class="dc3-box"></div>
+                                            <div class="dc3-box spacer">/</div>
+                                            <div class="dc3-box"></div>
+                                            <div class="dc3-box"></div>
+                                        </div>
+                                        <div class="dc3-label" style="font-size: 6px; margin-left: 2px;">A:</div>
+                                        <div class="dc3-boxes" id="prev-end-date-boxes">
+                                            <div class="dc3-box"></div>
+                                            <div class="dc3-box"></div>
+                                            <div class="dc3-box"></div>
+                                            <div class="dc3-box"></div>
+                                            <div class="dc3-box spacer">/</div>
+                                            <div class="dc3-box"></div>
+                                            <div class="dc3-box"></div>
+                                            <div class="dc3-box spacer">/</div>
+                                            <div class="dc3-box"></div>
+                                            <div class="dc3-box"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dc3-row">
+                                <div class="dc3-label">Área temática del curso</div>
+                                <div class="dc3-val" style="font-size:8.5px;" id="prev-course-area">--</div>
+                            </div>
+                            <div class="dc3-row">
+                                <div class="dc3-label">Nombre del agente capacitador o STPS</div>
+                                <div class="dc3-val" style="font-size:8.5px;" id="prev-course-instructor">--</div>
+                            </div>
+                        </div>
+
+                        <!-- Signatures Mockup -->
+                        <div class="dc3-signatures">
+                            <div>
+                                <div class="dc3-sig-val" id="prev-sig-instructor"
+                                    style="font-size: 7.5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
+                                    --</div>
+                                <div class="dc3-sig-line">Instructor o Tutor</div>
+                            </div>
+                            <div>
+                                <div class="dc3-sig-val" id="prev-sig-patron"
+                                    style="font-size: 7.5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
+                                    --</div>
+                                <div class="dc3-sig-line">Representante del patrón</div>
+                            </div>
+                            <div>
+                                <div class="dc3-sig-val" id="prev-sig-work"
+                                    style="font-size: 7.5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
+                                    --</div>
+                                <div class="dc3-sig-line">Representante de los trabajadores</div>
+                            </div>
+                        </div>
+                        <div class="dc3-signatures-bottom">
+                            <div class="dc3-sig-val" id="prev-sig-worker-bottom"
+                                style="font-size: 7.5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
+                                --</div>
+                            <div class="dc3-sig-line">Trabajador</div>
+                        </div>
+                        <div id="prev-legend-container"
+                            style="display:none; text-align: justify; font-size: 8px; margin-top: 6px; font-style: italic; border-top: 1px dashed rgba(0,0,0,0.15); padding-top: 4px; line-height: 1.2; color: #444;">
+                            Dando seguimiento a la supervisión nacional se identificó que hay CCHL en años anteriores al
+                            2024 que no están impresas por lo que se estarán regularizando con el nombre de la
+                            autoridades actuales para contar con el expediente completo atentamente Lic. Ivonne Reza
+                            Rugerio jefa de oficina de capacitación en funciones
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL 3: CONFIGURATION AND MAPPING -->
+        <div id="tab-config" class="panel">
+            <div class="card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                    </svg>
+                    Gestión de Perfiles de Firmas
+                </div>
+
+                <div class="info-block" style="margin-bottom: 15px;">
+                    Selecciona el perfil de tu zona para usarlo en los documentos, o crea uno nuevo en la parte
+                    inferior.
+                </div>
+
+                <div
+                    style="background: rgba(0, 176, 80, 0.1); border: 1px solid rgba(0, 176, 80, 0.2); padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+                    <label for="config-profile-select"
+                        style="font-size:12px; font-weight:bold; color:var(--primary); margin-bottom: 5px; display:block;">Perfil
+                        Activo para Generación:</label>
+                    <select id="config-profile-select" class="input-control" onchange="selectActiveProfile(this.value)"
+                        style="border-color: var(--primary); font-size: 14px; font-weight: 600;">
+                        <!-- Opciones cargadas dinámicamente -->
+                    </select>
+                </div>
+
+                <!-- CRUD Table for Representative Profiles -->
+                <div class="table-container" style="margin-bottom: 20px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50px; text-align:center;">Activo</th>
+                                <th>Nombre del Perfil</th>
+                                <th>Representante Patrón</th>
+                                <th>Representante Trabajador</th>
+                                <th>Razón Social (Empresa)</th>
+                                <th style="width: 140px; text-align:center;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="profiles-table-body">
+                            <!-- Filas cargadas dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Form to Add/Edit Profile -->
+                <div id="profile-form-container"
+                    style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--glass-border); padding: 16px; border-radius: 12px; display: flex; flex-direction: column; gap: 12px;">
+                    <h4 id="profile-form-title"
+                        style="font-size:14px; font-weight:700; color:#ffffff; display:flex; align-items:center; gap:6px;">
+                        <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: var(--primary);">
+                            <path id="profile-form-icon-path" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                        </svg>
+                        <span id="profile-form-title-text">Crear Nuevo Perfil de Firmas</span>
+                    </h4>
+
+                    <input type="hidden" id="edit-profile-id" value="">
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+                        <div class="form-group">
+                            <label for="profile-form-name">Nombre del Perfil (Identificador)</label>
+                            <input type="text" id="profile-form-name" class="input-control"
+                                placeholder="Ej. ZONA VERACRUZ - TUXPAN">
+                        </div>
+                        <div class="form-group">
+                            <label for="profile-form-patron">Representante del Patrón</label>
+                            <input type="text" id="profile-form-patron" class="input-control"
+                                placeholder="Ej. INGENIERO RAMON OCHOA VERDUZCO">
+                        </div>
+                        <div class="form-group">
+                            <label for="profile-form-worker">Representante de los Trabajadores</label>
+                            <input type="text" id="profile-form-worker" class="input-control"
+                                placeholder="Ej. LIC. JUAN CARLOS SERNA GOMEZ">
+                        </div>
+                        <div class="form-group">
+                            <label for="profile-form-company">Razón Social (Empresa)</label>
+                            <input type="text" id="profile-form-company" class="input-control"
+                                placeholder="COMISIÓN FEDERAL DE ELECTRICIDAD">
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+                        <button class="btn btn-secondary" id="btn-cancel-profile" onclick="cancelProfileEdit()"
+                            style="display:none; padding:8px 16px; font-size:12px;">Cancelar</button>
+                        <button class="btn" onclick="saveProfile()"
+                            style="padding:8px 16px; font-size:12px;">Guardar Perfil</button>
+                    </div>
+                </div>
+
+                <!-- Hidden inputs kept for compatibility with existing export scripts -->
+                <input type="hidden" id="config-patron-rep">
+                <input type="hidden" id="config-worker-rep">
+                <input type="hidden" id="config-company">
+
+                <div style="border-top:1px solid var(--glass-border); margin-top:20px; padding-top:20px;">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <!-- Col 1: Rango de Años para Fechas Aleatorias -->
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <h4 style="color:#ffffff; font-size:14px; border-left:3px solid var(--accent); padding-left:10px;">
+                                Rango de Años para Fechas Aleatorias</h4>
+                            <div class="info-block" style="font-size:12px; padding:10px 12px; margin-bottom: 0;">
+                                Ajusta el rango de años inicial y final para generar fechas aleatorias.
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div class="form-group">
+                                    <label for="config-rand-min-year">Año Inicial</label>
+                                    <input type="number" id="config-rand-min-year" class="input-control" value="2024"
+                                        min="1900" max="2100">
+                                </div>
+                                <div class="form-group">
+                                    <label for="config-rand-max-year">Año Final</label>
+                                    <input type="number" id="config-rand-max-year" class="input-control" value="2026"
+                                        min="1900" max="2100">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Col 2: Catálogo interactivo de Instructores -->
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <h4 style="color:#ffffff; font-size:14px; border-left:3px solid var(--primary); padding-left:10px;">
+                                Catálogo de Agentes Capacitadores (<span id="instructors-count">0</span>)</h4>
+                            <div style="display:flex; gap:6px;">
+                                <input type="text" id="new-instructor-name" class="input-control"
+                                    placeholder="Nombre del nuevo instructor..." style="padding: 6px 12px; font-size:12px;">
+                                <button class="btn" onclick="addNewInstructor()"
+                                    style="padding:6px 12px; font-size:12px; flex-shrink:0;">+ Agregar</button>
+                            </div>
+                            <div id="instructors-interactive-list"
+                                style="max-height: 180px; overflow-y: auto; display:flex; flex-direction:column; gap:6px; padding:6px; background:rgba(0,0,0,0.15); border-radius:10px; border:1px solid var(--glass-border);">
+                                <!-- Instructores listados por JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58z" />
+                    </svg>
+                    Mapeo de Columnas de Archivos Excel
+                </div>
+
+                <h4 style="color:#ffffff; font-size: 14px; border-left:3px solid var(--primary); padding-left:10px;">
+                    Excel General de Cursos / Créditos</h4>
+                <div class="mapper-grid">
+                    <div class="mapper-label">Nombre del Curso:</div>
+                    <input type="text" id="map-c-name" class="input-control" value="CURSO">
+
+                    <div class="mapper-label">Duración en Horas:</div>
+                    <input type="text" id="map-c-hours" class="input-control" value="HORAS">
+
+                    <div class="mapper-label">Área Temática (STPS):</div>
+                    <input type="text" id="map-c-area" class="input-control" value="AREA">
+
+                    <div class="mapper-label">Nombre del Instructor:</div>
+                    <input type="text" id="map-c-instructor" class="input-control" value="INSTRUCTOR">
+                </div>
+            </div>
+        </div>
+
+        <!-- App Footer -->
+        <footer class="app-footer">
+            Sistema creado por Alejandro Ayala para creacion de CCHL 2026 ©
+        </footer>
+
+    </div>
+
+    <!-- Print Section for PDF -->
+    <div id="print-section"></div>
+
+    <!-- Help Modal -->
+    <div id="help-modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+        <div class="card"
+            style="width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; background: var(--bg-gradient); border: 1px solid var(--primary); box-shadow: 0 10px 30px rgba(0,0,0,0.8); position: relative;">
+            <button onclick="document.getElementById('help-modal').style.display='none'"
+                style="position: absolute; right: 15px; top: 15px; background: none; border: none; color: #fff; font-size: 20px; cursor: pointer;">&times;</button>
+            <div class="card-title"
+                style="border-bottom: 1px solid rgba(0, 176, 80, 0.3); margin-bottom: 15px; color: #00b050;">
+                <svg viewBox="0 0 24 24" style="fill: #00b050;">
+                    <path
+                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" />
+                </svg>
+                Manual de Usuario
+            </div>
+
+            <div
+                style="font-size: 13px; line-height: 1.6; color: var(--text-main); display: flex; flex-direction: column; gap: 15px;">
+                <p><strong>Bienvenido al Generador de Constancias CCHL.</strong> Este sistema permite generar
+                    automáticamente los formatos de habilidades laborales (DC-3) a partir de los datos de Excel.</p>
+
+                <div>
+                    <h4 style="color: var(--accent); margin-bottom: 5px;">Paso 1: Cargar Archivos (Pestaña 1)</h4>
+                    <ul style="padding-left: 20px; color: var(--text-muted);">
+                        <li><strong>1. Archivo de Créditos:</strong> Sube el Excel principal que contiene las hojas
+                            <code>CAPPA</code> y <code>CAPPI</code> con la lista de trabajadores y sus requerimientos.
+                        </li>
+                        <li><strong>2. Plantilla Word:</strong> Sube el archivo <code>.docx</code> base (CCHL
+                            MODIFICABLE). Este documento se usará como plantilla para la generación.</li>
+                        <li><strong>3. Kardex:</strong> Selecciona de forma múltiple los archivos Excel de Kardex
+                            individuales de los trabajadores para obtener las fechas de término reales.</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 style="color: var(--accent); margin-bottom: 5px;">Paso 2: Configuración (Pestaña 3)</h4>
+                    <ul style="padding-left: 20px; color: var(--text-muted);">
+                        <li>Antes de generar documentos, ve a la pestaña <strong>Configuración y Catálogos</strong>.
+                        </li>
+                        <li>Selecciona el perfil de tu zona para cargar a los representantes del patrón y trabajadores.
+                            Si no existe, crea un nuevo perfil.</li>
+                        <li>Revisa los mapeos de columnas por si el formato de Excel ha cambiado.</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 style="color: var(--accent); margin-bottom: 5px;">Paso 3: Generación (Pestaña 2)</h4>
+                    <ul style="padding-left: 20px; color: var(--text-muted);">
+                        <li>Selecciona un trabajador en la lista de la izquierda.</li>
+                        <li>Verifica sus datos (CURP, Puesto). Si es necesario, edítalos o añade un curso manualmente
+                            con el botón verde.</li>
+                        <li>Marca la casilla <em>"Expediente Completo / Carpeta Generada"</em> para marcarlo como
+                            finalizado en el listado.</li>
+                        <li>Si el curso no tiene fecha en el Kardex, puedes usar el botón <strong>Fechas Aleatorias a
+                                Vacíos</strong>.</li>
+                        <li>En la parte derecha verás una previsualización de cómo se verá el formato impreso.</li>
+                        <li>Presiona <strong>Guardar en Word (.docx)</strong> para descargar el documento final
+                            generado.</li>
+                    </ul>
+                </div>
+
+                <p style="text-align: center; color: var(--text-muted); font-size: 11px; margin-top: 10px;"><em>El
+                        proceso no guarda datos en servidores externos; toda la información se procesa localmente en tu
+                        navegador.</em></p>
+            </div>
+            <div style="text-align: right; margin-top: 20px;">
+                <button class="btn"
+                    onclick="document.getElementById('help-modal').style.display='none'">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <svg style="width: 20px; height: 20px; fill: currentColor;" viewBox="0 0 24 24">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" id="toast-icon-path" />
+        </svg>
+        <span id="toast-msg">Mensaje de notificación</span>
+    </div>
+
+    <!-- Application Script Logic -->
+    <script src="js/app.js"></script>
+</body>
+
+</html>
