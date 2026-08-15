@@ -65,7 +65,7 @@ La aplicación se ejecuta de manera local en el navegador web (100% en el client
    - Navegar al panel "1. Cargar Archivos".
    - Subir el archivo `CREDITOS.xlsx` (con las pestañas `CAPPA` y `CAPPI`).
    - Subir la plantilla `CCHL MODIFICABLE.docx`.
-   - (Opcional) Subir archivos masivos de Kardex (.xlsx).
+   - Subir archivos masivos de Kardex (.xlsx).
 
 2. **Seleccionar y Configurar**:
    - Navegar al panel "2. Generador CCHL".
