@@ -31,24 +31,14 @@
 
     <div class="container">
 
-        <!-- App Header -->
-        <header class="app-header" style="position: relative; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
-            <div>
-                <div
-                    style="display:inline-flex; align-items:center; gap:8px; margin-bottom: 8px; background: rgba(0, 176, 80, 0.1); border: 1px solid rgba(0, 176, 80, 0.2); padding: 4px 12px; border-radius: 20px;">
-                    <span class="status-dot active" style="background:#00b050; box-shadow: 0 0 6px #00b050;"></span>
-                    <span
-                        style="font-size:10px; font-weight:700; color:#34d399; letter-spacing:1px; text-transform:uppercase;">CFE
-                        - CAPACITACIÓN</span>
-                </div>
-                <h1 style="margin: 0; font-size: 24px;">Generador de Constancias CCHL</h1>
-            </div>
-            <div style="display: flex; align-items: center; gap: 12px;">
+        <!-- App Header (Centered & Unboxed) -->
+        <header class="app-header">
+            <div class="app-header-actions">
                 <a href="https://SistemaCO.onrender.com" target="_blank" rel="noopener noreferrer" class="btn"
-                    style="background: linear-gradient(135deg, #00b050, #059669); color: #ffffff; border: none; font-weight: 800; font-size: 12px; padding: 9px 18px; border-radius: 24px; box-shadow: 0 4px 15px rgba(0, 176, 80, 0.4); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease-in-out; text-transform: uppercase; letter-spacing: 0.5px;"
-                    onmouseover="this.style.transform='scale(1.04)'; this.style.boxShadow='0 6px 20px rgba(0, 176, 80, 0.6)';"
-                    onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 15px rgba(0, 176, 80, 0.4)';">
-                    <svg viewBox="0 0 24 24" style="width:16px; height:16px; fill:currentColor;">
+                    style="background: linear-gradient(135deg, #00b050, #059669); color: #ffffff; border: none; font-weight: 800; font-size: 11.5px; padding: 8px 16px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0, 176, 80, 0.35); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease-in-out; text-transform: uppercase; letter-spacing: 0.5px;"
+                    onmouseover="this.style.transform='scale(1.04)'; this.style.boxShadow='0 6px 20px rgba(0, 176, 80, 0.5)';"
+                    onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 15px rgba(0, 176, 80, 0.35)';">
+                    <svg viewBox="0 0 24 24" style="width:14px; height:14px; fill:currentColor;">
                         <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
                     </svg>
                     ¿NECESITAS ARCHIVOS CO-03?
@@ -57,6 +47,15 @@
                     style="border-radius: 50%; width: 34px; height: 34px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; background: rgba(0, 176, 80, 0.15); border-color: rgba(0, 176, 80, 0.3); color: #00b050; cursor: pointer;"
                     title="Manual de Usuario">?</button>
             </div>
+
+            <div
+                style="display:inline-flex; align-items:center; gap:8px; background: rgba(0, 176, 80, 0.12); border: 1px solid rgba(0, 176, 80, 0.3); padding: 4px 12px; border-radius: 20px; margin-bottom: 2px;">
+                <span class="status-dot active" style="background:#00b050; box-shadow: 0 0 6px #00b050;"></span>
+                <span
+                    style="font-size:10px; font-weight:700; color:#34d399; letter-spacing:1px; text-transform:uppercase;">CFE — CAPACITACIÓN</span>
+            </div>
+
+            <h1>Generador de Constancias CCHL</h1>
         </header>
 
         <!-- Navigation Tabs -->
@@ -496,7 +495,7 @@
                                     style="display:none; background: #e31837; border: 2px solid #ffcc00; padding: 4px; flex-direction: column; align-items: flex-end; color: white; font-family: Arial, sans-serif;">
                                     <div
                                         style="background: black; border-radius: 50%; width: 12px; height: 12px; display: flex; align-items: center; justify-content: center; font-size: 7px; margin-bottom: 2px; align-self: flex-start; color: white;">
-                                        ⚙️</div>
+                                        <svg viewBox="0 0 24 24" style="width:8px; height:8px; fill:white;"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0-.44-.17-.47-.41l-.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></div>
                                     <div style="font-weight: bold; font-size: 11px; letter-spacing: -0.5px;">Suterm
                                     </div>
                                 </div>
@@ -684,7 +683,7 @@
                         <path
                             d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                     </svg>
-                    Gestión de Perfiles de Firmas
+                    Gestión de Perfiles de Representantes
                 </div>
 
                 <div class="info-block" style="margin-bottom: 15px;">
@@ -730,7 +729,7 @@
                         <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: var(--primary);">
                             <path id="profile-form-icon-path" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
                         </svg>
-                        <span id="profile-form-title-text">Crear Nuevo Perfil de Firmas</span>
+                        <span id="profile-form-title-text">Crear Nuevo Perfil de Representantes</span>
                     </h4>
 
                     <input type="hidden" id="edit-profile-id" value="">
@@ -771,41 +770,6 @@
                             style="display:none; padding:8px 16px; font-size:12px;">Cancelar</button>
                         <button class="btn" onclick="saveProfile()"
                             style="padding:8px 16px; font-size:12px;">Guardar Perfil</button>
-                    </div>
-                </div>
-
-                <!-- Hidden/Discreet Digital Signatures Manager -->
-                <div style="margin-top: 16px;">
-                    <div class="sig-manager-toggle" onclick="toggleDigitalSignaturesPanel()">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: var(--primary);">
-                                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                            </svg>
-                            <span style="font-weight: 700; font-size: 13px; color: #ffffff;">Firmas Digitales / Imágenes</span>
-                            <span id="digital-signatures-count-badge" class="badge" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; font-size: 10px;">0 registradas</span>
-                        </div>
-                        <span id="sig-manager-arrow" style="color: var(--text-muted); font-size: 12px; transition: transform 0.2s ease;">▼</span>
-                    </div>
-
-                    <div id="digital-signatures-container" style="display: none; background: rgba(15, 23, 42, 0.4); border: 1px solid var(--glass-border); border-top: none; padding: 16px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
-                        <div class="info-block" style="font-size: 11.5px; margin-bottom: 12px; line-height: 1.4;">
-                            💡 <strong>Vinculación automática:</strong> Nombra tu archivo de imagen incluyendo el nombre de la persona (ejemplo: <code>firma juan carlos serna.png</code> o <code>firma jose david lopez.png</code>). El sistema lo asignará automáticamente al área de firma de ese representante o trabajador.
-                        </div>
-
-                        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;">
-                            <input type="file" id="input-digital-signature" accept="image/png, image/jpeg, image/webp" multiple style="display: none;" onchange="handleSignatureUpload(event)">
-                            <button class="btn" onclick="document.getElementById('input-digital-signature').click()" style="padding: 8px 16px; font-size: 12px;">
-                                ➕ Cargar Imagen de Firma (PNG / JPG)
-                            </button>
-                            <input type="file" id="input-excel-signatures" accept=".xlsx, .xls" style="display: none;" onchange="handleExcelSignatureUpload(event)">
-                            <button class="btn btn-secondary" onclick="document.getElementById('input-excel-signatures').click()" style="padding: 8px 16px; font-size: 12px; background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.3); color: #93c5fd;">
-                                📊 Cargar Excel de Firmas (.xlsx)
-                            </button>
-                        </div>
-
-                        <div id="digital-signatures-list" class="sig-grid">
-                            <!-- Filas cargadas dinámicamente -->
-                        </div>
                     </div>
                 </div>
 

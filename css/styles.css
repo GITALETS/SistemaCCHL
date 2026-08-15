@@ -95,71 +95,103 @@ body {
 
 /* Header design */
 .app-header {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
-    margin-bottom: 2px;
+    margin-bottom: 20px;
+    padding: 10px 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+}
+
+.app-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+@media (min-width: 768px) {
+    .app-header-actions {
+        position: absolute;
+        right: 0;
+        top: 0;
+        margin-bottom: 0;
+    }
 }
 
 .app-header h1 {
     font-family: var(--font-outfit);
     font-size: 26px;
     font-weight: 800;
-    background: linear-gradient(to right, #ffffff, #a7f3d0, #00b050, #00c2a8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 4px;
-    letter-spacing: -0.5px;
-}
-
-.app-header p {
-    font-size: 14px;
-    color: var(--text-muted);
-    line-height: 1.5;
-    max-width: 700px;
-    margin: 0 auto;
+    color: #ffffff;
+    margin: 4px 0 0 0;
+    text-align: center;
+    letter-spacing: -0.3px;
 }
 
 /* Navigation Tabs */
 .tabs {
     display: flex;
     justify-content: center;
-    gap: 15px;
-    border-bottom: 1px solid var(--glass-border);
-    padding-bottom: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    background: rgba(12, 28, 22, 0.45);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 8px 12px;
+    backdrop-filter: blur(10px);
+    margin-bottom: 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .tab-btn {
     background: transparent;
     border: 1px solid transparent;
     color: var(--text-muted);
-    padding: 8px 20px;
-    font-size: 13px;
-    font-weight: 600;
+    padding: 10px 22px;
+    font-size: 13.5px;
+    font-weight: 700;
     font-family: var(--font-outfit);
-    border-radius: 10px;
+    border-radius: 12px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+    letter-spacing: 0.2px;
 }
 
 .tab-btn svg {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     fill: currentColor;
+    transition: transform 0.2s ease;
 }
 
 .tab-btn:hover {
-    color: var(--text-main);
-    background: rgba(255, 255, 255, 0.03);
-    border-color: var(--glass-border);
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
 }
 
 .tab-btn.active {
     color: #ffffff;
-    background: var(--primary);
-    box-shadow: 0 4px 15px var(--primary-glow);
-    border-color: transparent;
+    background: linear-gradient(135deg, #00b050 0%, #059669 100%);
+    box-shadow: 0 6px 20px rgba(0, 176, 80, 0.4);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.tab-btn.active svg {
+    transform: scale(1.1);
 }
 
 /* Main Workspace Panels */
