@@ -17,6 +17,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.4/dist/pizzip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.37.11/build/docxtemplater.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docxtemplater-image-module-free@1.1.1/build/imagemodule.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/file-saver/2.0.5/FileSaver.min.js"></script>
 
     <link rel="stylesheet" href="css/styles.css">
@@ -31,18 +32,31 @@
     <div class="container">
 
         <!-- App Header -->
-        <header class="app-header" style="position: relative;">
-            <button class="btn btn-secondary" onclick="document.getElementById('help-modal').style.display='flex'"
-                style="position: absolute; right: 0; top: 0; border-radius: 50%; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; background: rgba(0, 176, 80, 0.15); border-color: rgba(0, 176, 80, 0.3); color: #00b050;"
-                title="Manual de Usuario">?</button>
-            <div
-                style="display:inline-flex; align-items:center; gap:8px; margin-bottom: 8px; background: rgba(0, 176, 80, 0.1); border: 1px solid rgba(0, 176, 80, 0.2); padding: 4px 12px; border-radius: 20px;">
-                <span class="status-dot active" style="background:#00b050; box-shadow: 0 0 6px #00b050;"></span>
-                <span
-                    style="font-size:10px; font-weight:700; color:#34d399; letter-spacing:1px; text-transform:uppercase;">CFE
-                    - CAPACITACIÓN</span>
+        <header class="app-header" style="position: relative; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+            <div>
+                <div
+                    style="display:inline-flex; align-items:center; gap:8px; margin-bottom: 8px; background: rgba(0, 176, 80, 0.1); border: 1px solid rgba(0, 176, 80, 0.2); padding: 4px 12px; border-radius: 20px;">
+                    <span class="status-dot active" style="background:#00b050; box-shadow: 0 0 6px #00b050;"></span>
+                    <span
+                        style="font-size:10px; font-weight:700; color:#34d399; letter-spacing:1px; text-transform:uppercase;">CFE
+                        - CAPACITACIÓN</span>
+                </div>
+                <h1 style="margin: 0; font-size: 24px;">Generador de Constancias CCHL</h1>
             </div>
-            <h1>Generador de Constancias CCHL</h1>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <a href="https://SistemaCO.onrender.com" target="_blank" rel="noopener noreferrer" class="btn"
+                    style="background: linear-gradient(135deg, #00b050, #059669); color: #ffffff; border: none; font-weight: 800; font-size: 12px; padding: 9px 18px; border-radius: 24px; box-shadow: 0 4px 15px rgba(0, 176, 80, 0.4); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease-in-out; text-transform: uppercase; letter-spacing: 0.5px;"
+                    onmouseover="this.style.transform='scale(1.04)'; this.style.boxShadow='0 6px 20px rgba(0, 176, 80, 0.6)';"
+                    onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 15px rgba(0, 176, 80, 0.4)';">
+                    <svg viewBox="0 0 24 24" style="width:16px; height:16px; fill:currentColor;">
+                        <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
+                    </svg>
+                    ¿NECESITAS ARCHIVOS CO-03?
+                </a>
+                <button class="btn btn-secondary" onclick="document.getElementById('help-modal').style.display='flex'"
+                    style="border-radius: 50%; width: 34px; height: 34px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; background: rgba(0, 176, 80, 0.15); border-color: rgba(0, 176, 80, 0.3); color: #00b050; cursor: pointer;"
+                    title="Manual de Usuario">?</button>
+            </div>
         </header>
 
         <!-- Navigation Tabs -->
@@ -92,8 +106,17 @@
                             <code>CCHL MODIFICABLE.docx</code> con
                             etiquetas <code>«...»</code>. (Se preservan logos y formatos).
                         </li>
+                        <li><strong>3. Hoja o Excel de Firmas (Opcional) (.xlsx):</strong> Puedes incluir una hoja <code>FIRMAS</code> dentro de <code>CREDITOS.xlsx</code> o subir un archivo Excel exclusivo para firmas de representantes, instructores y trabajadores.</li>
                     </ul>
-                    <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
+                    <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <button class="btn" onclick="downloadExampleExcelTemplate()"
+                            style="padding: 7px 14px; font-size: 12px; font-weight: 700; background: rgba(0, 176, 80, 0.2); border: 1px solid rgba(0, 176, 80, 0.4); color: #34d399; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"
+                            title="Descarga una plantilla de Excel con datos de ejemplo lista para subir">
+                            <svg viewBox="0 0 24 24" style="width:16px; height:16px; fill:currentColor;">
+                                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                            </svg>
+                            Descargar Plantilla de Ejemplo (.xlsx)
+                        </button>
                         <button class="btn btn-secondary" onclick="resetDatabaseAction()"
                             style="padding: 6px 12px; font-size: 11px; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: #fca5a5;">
                             Resetear Base de Datos (Limpiar Memoria)
@@ -610,19 +633,22 @@
 
                         <!-- Signatures Mockup -->
                         <div class="dc3-signatures">
-                            <div>
+                            <div class="dc3-sig-box">
+                                <div id="prev-sig-instructor-img" class="dc3-sig-img-container" style="display:none;"></div>
                                 <div class="dc3-sig-val" id="prev-sig-instructor"
                                     style="font-size: 7.5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
                                     --</div>
                                 <div class="dc3-sig-line">Instructor o Tutor</div>
                             </div>
-                            <div>
+                            <div class="dc3-sig-box">
+                                <div id="prev-sig-patron-img" class="dc3-sig-img-container" style="display:none;"></div>
                                 <div class="dc3-sig-val" id="prev-sig-patron"
                                     style="font-size: 7.5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
                                     --</div>
                                 <div class="dc3-sig-line">Representante del patrón</div>
                             </div>
-                            <div>
+                            <div class="dc3-sig-box">
+                                <div id="prev-sig-work-img" class="dc3-sig-img-container" style="display:none;"></div>
                                 <div class="dc3-sig-val" id="prev-sig-work"
                                     style="font-size: 7.5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
                                     --</div>
@@ -630,10 +656,13 @@
                             </div>
                         </div>
                         <div class="dc3-signatures-bottom">
-                            <div class="dc3-sig-val" id="prev-sig-worker-bottom"
-                                style="font-size: 7.5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
-                                --</div>
-                            <div class="dc3-sig-line">Trabajador</div>
+                            <div class="dc3-sig-box">
+                                <div id="prev-sig-worker-bottom-img" class="dc3-sig-img-container" style="display:none;"></div>
+                                <div class="dc3-sig-val" id="prev-sig-worker-bottom"
+                                    style="font-size: 7.5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
+                                    --</div>
+                                <div class="dc3-sig-line">Trabajador</div>
+                            </div>
                         </div>
                         <div id="prev-legend-container"
                             style="display:none; text-align: justify; font-size: 8px; margin-top: 6px; font-style: italic; border-top: 1px dashed rgba(0,0,0,0.15); padding-top: 4px; line-height: 1.2; color: #444;">
@@ -706,7 +735,7 @@
 
                     <input type="hidden" id="edit-profile-id" value="">
 
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
                         <div class="form-group">
                             <label for="profile-form-name">Nombre del Perfil (Identificador)</label>
                             <input type="text" id="profile-form-name" class="input-control"
@@ -718,9 +747,17 @@
                                 placeholder="Ej. INGENIERO RAMON OCHOA VERDUZCO">
                         </div>
                         <div class="form-group">
-                            <label for="profile-form-worker">Representante de los Trabajadores</label>
+                            <label for="profile-form-patron-year">Año Inicio Patrón</label>
+                            <input type="number" id="profile-form-patron-year" class="input-control" value="2021" min="1900" max="2100">
+                        </div>
+                        <div class="form-group">
+                            <label for="profile-form-worker">Representante de Trabajadores</label>
                             <input type="text" id="profile-form-worker" class="input-control"
                                 placeholder="Ej. LIC. JUAN CARLOS SERNA GOMEZ">
+                        </div>
+                        <div class="form-group">
+                            <label for="profile-form-worker-year">Año Inicio Trabajadores</label>
+                            <input type="number" id="profile-form-worker-year" class="input-control" value="2021" min="1900" max="2100">
                         </div>
                         <div class="form-group">
                             <label for="profile-form-company">Razón Social (Empresa)</label>
@@ -737,10 +774,47 @@
                     </div>
                 </div>
 
+                <!-- Hidden/Discreet Digital Signatures Manager -->
+                <div style="margin-top: 16px;">
+                    <div class="sig-manager-toggle" onclick="toggleDigitalSignaturesPanel()">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: var(--primary);">
+                                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                            </svg>
+                            <span style="font-weight: 700; font-size: 13px; color: #ffffff;">Firmas Digitales / Imágenes</span>
+                            <span id="digital-signatures-count-badge" class="badge" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; font-size: 10px;">0 registradas</span>
+                        </div>
+                        <span id="sig-manager-arrow" style="color: var(--text-muted); font-size: 12px; transition: transform 0.2s ease;">▼</span>
+                    </div>
+
+                    <div id="digital-signatures-container" style="display: none; background: rgba(15, 23, 42, 0.4); border: 1px solid var(--glass-border); border-top: none; padding: 16px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
+                        <div class="info-block" style="font-size: 11.5px; margin-bottom: 12px; line-height: 1.4;">
+                            💡 <strong>Vinculación automática:</strong> Nombra tu archivo de imagen incluyendo el nombre de la persona (ejemplo: <code>firma juan carlos serna.png</code> o <code>firma jose david lopez.png</code>). El sistema lo asignará automáticamente al área de firma de ese representante o trabajador.
+                        </div>
+
+                        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;">
+                            <input type="file" id="input-digital-signature" accept="image/png, image/jpeg, image/webp" multiple style="display: none;" onchange="handleSignatureUpload(event)">
+                            <button class="btn" onclick="document.getElementById('input-digital-signature').click()" style="padding: 8px 16px; font-size: 12px;">
+                                ➕ Cargar Imagen de Firma (PNG / JPG)
+                            </button>
+                            <input type="file" id="input-excel-signatures" accept=".xlsx, .xls" style="display: none;" onchange="handleExcelSignatureUpload(event)">
+                            <button class="btn btn-secondary" onclick="document.getElementById('input-excel-signatures').click()" style="padding: 8px 16px; font-size: 12px; background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.3); color: #93c5fd;">
+                                📊 Cargar Excel de Firmas (.xlsx)
+                            </button>
+                        </div>
+
+                        <div id="digital-signatures-list" class="sig-grid">
+                            <!-- Filas cargadas dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Hidden inputs kept for compatibility with existing export scripts -->
                 <input type="hidden" id="config-patron-rep">
                 <input type="hidden" id="config-worker-rep">
                 <input type="hidden" id="config-company">
+                <input type="hidden" id="config-patron-year" value="2021">
+                <input type="hidden" id="config-worker-year" value="2021">
 
                 <div style="border-top:1px solid var(--glass-border); margin-top:20px; padding-top:20px;">
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
