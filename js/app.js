@@ -365,31 +365,46 @@ function preprocessTemplateXml(templateFileBuffer) {
 // Web Audio Synthesizer for offline sound effects (Disabled per user request)
 function playSound(type) {}
 
-// Instructores por defecto (23 nombres)
+// Instructores por defecto (38 nombres oficiales de LISTADO GENERAL.xlsx)
 const DEFAULT_INSTRUCTORS = [
-    "FRANCISCO JAVIER MARTÍNEZ RUIZ",
-    "BALDOMERO CORTEZ LARA",
-    "DAVID VICENTE ESPINOZA SOTO",
-    "BENJAMÍN ORTEGA SUÁREZ",
-    "EDGAR NOE GRACIA LÓPEZ",
-    "ERNESTO LENIN BARRIGA ARREOLA",
-    "ISMAEL GARCÍA VALDEZ",
-    "MANUEL FLORES OVANDO",
-    "SANTIAGO AYALA ESTRADA",
-    "SERGIO OVANDO GARCÍA",
-    "URIEL UNDA SÁNCHEZ",
-    "WALTER SALVADOR AGUILAR GUZMÁN",
-    "ZEUS ADONIS GALICIA LUNA",
-    "DANIEL ALFARO SÁMANO",
-    "MARTÍN ALEJANDRO MORENO GUERRERO",
-    "MIGUEL ÁNGEL RAMÍREZ REYES",
-    "MARCOS ALMERAYA VELASCO",
-    "ERNESTO GARDUÑO RAMÍREZ",
-    "ISRAEL GARCÍA SERVÍN",
-    "IVÁN ARMANDO SÁNCHEZ LORÍA",
-    "EZEQUIEL DANIEL VELÁZQUEZ CORTÉS",
-    "JORGE ENRIQUE GÓMEZ CABRERA",
-    "RAMÓN OCHOA VERDUZCO"
+    "MARCELA TALAVERA NEIRA",
+    "JAVIER GONZALEZ NAVARRETE",
+    "EDSON RAFAEL PACHECO BARRIGA",
+    "ERASTO SOSA JIMENEZ",
+    "HELADIO CHAVEZ ORNELAS",
+    "MANUEL ALEJANDRO GONZALEZ BELTRAN",
+    "RUBEN JESUS SANTOYO VILLANUEVA",
+    "JOSE ALFONSO LARA OLGUIN",
+    "ERYBENALY ABARCA VARGAS",
+    "JAIME MONROY VERGARA",
+    "GUILLERMO DAVID LUQUEÑO CARCAMO",
+    "EDDER JAVIER PACHECO REYES",
+    "FRANCISCO GUADALUPE XAVIER MILLAN",
+    "ARMANDO ESAU RUIZ SANCHEZ",
+    "URIEL RAMON TERREZ MENDEZ",
+    "JOSE ARTURO MORENO GARCIA",
+    "JORGE ALVAREZ GONZALEZ",
+    "JOSE ANTONIO RUIZ DAVILA",
+    "ROBERTO AUGUSTO TABOADA JIMENEZ",
+    "LAURO CABRERA GAYOSSO",
+    "ERNESTO GARDUÑO RAMIREZ",
+    "JOSE DE JESUS CARDENAS NERI",
+    "ROSA NALLELY GONZALEZ FLORES",
+    "MANUEL RAYMUNDO CORTES CORTES",
+    "JOSE ALFREDO FUENTES VAZQUEZ",
+    "VICTOR HUGO CISNEROS GASPAR",
+    "FABIOLA RAMIREZ AGUILAR",
+    "SERGIO CALDERON ENRIQUEZ",
+    "JOSE RIVER CELIS PRECIADO",
+    "MANUEL ANTONIO RODAS SOBERANO",
+    "MIGUEL ANGEL JIMENEZ LOPEZ",
+    "CRISTIAN FRANCISCO VILLA",
+    "ERICK OROZCO MARTINEZ",
+    "EZEQUIEL MENDEZ VICENTE",
+    "ERICK DAVID VILLEGAS HERNANDEZ",
+    "VICTOR MONTIEL BEJAR",
+    "JOSE EZEQUIEL FLETES HERNANDEZ",
+    "VICTOR MANUEL ORTEGA SERVIN"
 ];
 
 // Global State
@@ -1051,9 +1066,12 @@ function loadStaticConfig() {
     loadDigitalSignatures();
 
     // Load Instructors Catalog
+    // Load Instructors Catalog - Catálogo oficial exclusivo de 38 instructores de LISTADO GENERAL.xlsx
+    const CURRENT_INSTRUCTORS_VERSION = '2026_listado_general_oficial_38';
+    const storedVersion = localStorage.getItem('cfe_instructors_catalog_version');
     const storedInst = localStorage.getItem('cfe_instructors_catalog');
     const shouldStripLegacyPrefix = localStorage.getItem('cfe_instructors_prefix_cleaned_v1') !== 'true';
-    if (storedInst) {
+    if (storedInst && storedVersion === CURRENT_INSTRUCTORS_VERSION) {
         try {
             AppState.instructors = normalizeInstructorCatalog(JSON.parse(storedInst), shouldStripLegacyPrefix);
         } catch (e) {
@@ -1064,6 +1082,7 @@ function loadStaticConfig() {
         AppState.instructors = normalizeInstructorCatalog(DEFAULT_INSTRUCTORS, shouldStripLegacyPrefix);
     }
     localStorage.setItem('cfe_instructors_catalog', JSON.stringify(AppState.instructors));
+    localStorage.setItem('cfe_instructors_catalog_version', CURRENT_INSTRUCTORS_VERSION);
     localStorage.setItem('cfe_instructors_prefix_cleaned_v1', 'true');
 
     updateInstructorsDatalist();
@@ -1586,6 +1605,20 @@ function deleteInstructor(index) {
 
     showNotification(`Instructor "${name}" eliminado.`);
 }
+
+function resetInstructorsToDefault() {
+    AppState.instructors = normalizeInstructorCatalog(DEFAULT_INSTRUCTORS, false);
+    localStorage.setItem('cfe_instructors_catalog', JSON.stringify(AppState.instructors));
+    localStorage.setItem('cfe_instructors_catalog_version', '2026_listado_general_oficial_38');
+    updateInstructorsDatalist();
+    renderInstructorsManager();
+    if (AppState.selectedWorker) {
+        renderCoursesTableForActiveWorker();
+        refreshActiveCoursePreview();
+    }
+    showNotification("Catálogo restablecido a los 38 instructores oficiales.");
+}
+
 
 // Process workers data from CREDITOS
 function mergeWorkersData() {
@@ -2414,7 +2447,7 @@ function loadCoursesForSelectedWorker(resetSelection) {
 
         let startDate = endDate ? calculateStartDate(endDate, req.hours) : null;
 
-        // Assign random instructor from list of 23
+        // Assign random instructor from catalog
         let randInst = '';
         if (AppState.instructors.length > 0) {
             const randIdx = Math.floor(Math.random() * AppState.instructors.length);
