@@ -125,14 +125,14 @@
 
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>1. Archivo de Créditos (Hojas CAPPA / CAPPI) (.xlsx)</label>
+                        <label>1. Archivo(s) de Créditos / CCHL (.xlsx)</label>
                         <div class="upload-zone" id="zone-courses">
                             <svg class="upload-icon" viewBox="0 0 24 24">
                                 <path
                                     d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
                             </svg>
-                            <p class="desc">Arrastra el archivo de Créditos (CAPPA/CAPPI) o haz clic para buscar</p>
-                            <input type="file" id="input-courses" class="file-input" accept=".xlsx, .xls">
+                            <p class="desc">Arrastra archivo(s) de Créditos / CCHL o haz clic para buscar</p>
+                            <input type="file" id="input-courses" class="file-input" accept=".xlsx, .xls" multiple>
                         </div>
                     </div>
 
@@ -318,22 +318,33 @@
                     </div>
                 </div>
 
-                <div style="display:flex; gap:8px; align-items:stretch;">
-                    <div
-                        style="display:flex; gap:8px; align-items:center; background: rgba(15, 23, 42, 0.3); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--glass-border); flex: 1;">
-                        <svg viewBox="0 0 24 24"
-                            style="width: 13px; height: 13px; fill: var(--text-muted); flex-shrink:0;">
-                            <path
-                                d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
-                        </svg>
-                        <input type="text" id="search-courses-input" class="input-control"
-                            placeholder="Buscar curso de este trabajador..." oninput="filterCoursesTable()"
-                            style="padding: 2px 4px; font-size: 12.5px; border:none; background:transparent; width:100%; height:auto;">
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:space-between;">
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Filtrar:</span>
+                            <button type="button" class="btn btn-secondary filter-pill active" id="btn-filter-all" onclick="setCourseFilterType('all')" style="padding:4px 10px; font-size:11px; border-radius:14px;">Todos (<span id="count-filter-all">0</span>)</button>
+                            <button type="button" class="btn btn-secondary filter-pill" id="btn-filter-cappa" onclick="setCourseFilterType('CAPPA')" style="padding:4px 10px; font-size:11px; border-radius:14px; border-color: rgba(5, 150, 105, 0.4); color:#34d399;">CAPPA (<span id="count-filter-cappa">0</span>)</button>
+                            <button type="button" class="btn btn-secondary filter-pill" id="btn-filter-cappi" onclick="setCourseFilterType('CAPPI')" style="padding:4px 10px; font-size:11px; border-radius:14px; border-color: rgba(2, 132, 199, 0.4); color:#38bdf8;">CAPPI (<span id="count-filter-cappi">0</span>)</button>
+                        </div>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <button type="button" class="btn btn-secondary" onclick="toggleAllVisibleCourses(true)" style="padding:5px 10px; font-size:11px;">Marcar Todos</button>
+                            <button type="button" class="btn btn-secondary" onclick="toggleAllVisibleCourses(false)" style="padding:5px 10px; font-size:11px;">Desmarcar</button>
+                        </div>
                     </div>
-                    <button class="btn btn-secondary" onclick="toggleManualCourseForm(true)" id="btn-add-manual-course"
-                        style="padding: 0 12px; font-size: 12px; flex-shrink:0; text-transform:none;" disabled>
-                        + Agregar Curso Manual
-                    </button>
+                    <div style="display:flex; gap:8px; align-items:stretch;">
+                        <div style="display:flex; gap:8px; align-items:center; background: rgba(15, 23, 42, 0.3); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--glass-border); flex: 1;">
+                            <svg viewBox="0 0 24 24" style="width: 13px; height: 13px; fill: var(--text-muted); flex-shrink:0;">
+                                <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+                            </svg>
+                            <input type="text" id="search-courses-input" class="input-control" placeholder="Buscar curso o batería..." oninput="filterCoursesTable()" style="padding: 2px 4px; font-size: 12.5px; border:none; background:transparent; width:100%; height:auto;">
+                        </div>
+                        <button type="button" class="btn btn-secondary" onclick="generateRandomDatesForEmptyCourses()" style="padding: 0 12px; font-size: 11px; flex-shrink:0; text-transform:none;" title="Asigna fechas en días hábiles solo a los cursos que no tienen fecha">
+                            Fechas a Cursos Vacíos
+                        </button>
+                        <button class="btn btn-secondary" onclick="toggleManualCourseForm(true)" id="btn-add-manual-course" style="padding: 0 12px; font-size: 11px; flex-shrink:0; text-transform:none;" disabled>
+                            + Curso Manual
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Formulario Agregar Curso Manualmente -->
@@ -792,12 +803,12 @@
                             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                                 <div class="form-group">
                                     <label for="config-rand-min-year">Año Inicial</label>
-                                    <input type="number" id="config-rand-min-year" class="input-control" value="2024"
+                                    <input type="number" id="config-rand-min-year" class="input-control" value="2016"
                                         min="1900" max="2100">
                                 </div>
                                 <div class="form-group">
                                     <label for="config-rand-max-year">Año Final</label>
-                                    <input type="number" id="config-rand-max-year" class="input-control" value="2026"
+                                    <input type="number" id="config-rand-max-year" class="input-control" value="2025"
                                         min="1900" max="2100">
                                 </div>
                             </div>
@@ -805,8 +816,20 @@
 
                         <!-- Col 2: Catálogo interactivo de Instructores -->
                         <div style="display:flex; flex-direction:column; gap:12px;">
-                            <h4 style="color:#ffffff; font-size:14px; border-left:3px solid var(--primary); padding-left:10px;">
-                                Catálogo de Agentes Capacitadores (<span id="instructors-count">0</span>)</h4>
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                                <h4 style="color:#ffffff; font-size:14px; border-left:3px solid var(--primary); padding-left:10px; margin:0;">
+                                    Catálogo de Agentes Capacitadores (<span id="instructors-count">38</span>)</h4>
+                                <div style="display:flex; gap:6px;">
+                                    <button class="btn btn-secondary" onclick="resetInstructorsToDefault()"
+                                        style="padding:4px 8px; font-size:11px;" title="Restaurar a los 38 instructores oficiales de LISTADO GENERAL">
+                                        Restaurar Oficiales (38)
+                                    </button>
+                                    <label class="btn btn-secondary" style="padding:4px 8px; font-size:11px; cursor:pointer;" title="Cargar instructores desde un archivo Excel como LISTADO GENERAL.xlsx">
+                                        Importar Excel
+                                        <input type="file" id="input-instructors-excel" accept=".xlsx, .xls" style="display:none;" onchange="importInstructorsFromExcel(this.files[0])">
+                                    </label>
+                                </div>
+                            </div>
                             <div style="display:flex; gap:6px;">
                                 <input type="text" id="new-instructor-name" class="input-control"
                                     placeholder="Nombre del nuevo instructor..." style="padding: 6px 12px; font-size:12px;">

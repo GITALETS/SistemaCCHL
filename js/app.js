@@ -192,6 +192,17 @@ async function restoreSavedState() {
         const templateAsset = await getAsset('template_file');
         if (templateAsset) {
             processTemplateFile(templateAsset.data, templateAsset.name);
+        } else {
+            // Auto-fetch default template from server/Render if not in IndexedDB
+            fetch('CCHL MODIFICABLE.docx?t=' + Date.now())
+                .then(res => res.ok ? res.arrayBuffer() : null)
+                .then(b => {
+                    if (b) {
+                        processTemplateFile(b, 'CCHL MODIFICABLE.docx');
+                        saveAsset('template_file', 'CCHL MODIFICABLE.docx', b);
+                    }
+                })
+                .catch(() => {});
         }
 
         // 2. Restore history files (Kardex)
@@ -209,6 +220,17 @@ async function restoreSavedState() {
         const creditsAsset = await getAsset('credits_file');
         if (creditsAsset) {
             processCreditsFile(creditsAsset.data, creditsAsset.name);
+        } else {
+            // Auto-fetch default credits from server/Render if not in IndexedDB
+            fetch('CREDITOS.xlsx?t=' + Date.now())
+                .then(res => res.ok ? res.arrayBuffer() : null)
+                .then(b => {
+                    if (b) {
+                        processCreditsFile(b, 'CREDITOS.xlsx');
+                        saveAsset('credits_file', 'CREDITOS.xlsx', b);
+                    }
+                })
+                .catch(() => {});
         }
 
         // 4. Update tab button ready state
@@ -826,31 +848,173 @@ function showNotification(message, isError = false) {
     }, 4000);
 }
 
-// Helper: Sincronizar trabajadores desde archivos Kardex si no hay lista de créditos
+// Helper: Extraer metadatos y cursos de un archivo Kardex/CCHL individual
+function extractKardexData(rawRows, fallbackName = '') {
+    if (!rawRows || rawRows.length === 0) {
+        return {
+            workerName: fallbackName,
+            rpe: '',
+            puesto: '',
+            curp: '',
+            courses: []
+        };
+    }
+
+    let extractedRpe = '';
+    let extractedName = '';
+    let extractedPuesto = '';
+    let extractedCurp = '';
+
+    for (let r = 0; r < Math.min(20, rawRows.length); r++) {
+        const row = rawRows[r];
+        if (!row) continue;
+        for (let c = 0; c < row.length; c++) {
+            const cellStr = String(row[c] || '').trim().toUpperCase();
+            if (cellStr.includes('RPE')) {
+                let nextVal = String(row[c + 1] || '').trim();
+                if (!nextVal) nextVal = cellStr.replace(/^RPE:?\s*/i, '').trim();
+                if (nextVal && !extractedRpe) extractedRpe = nextVal;
+            }
+            if (cellStr.includes('NOMBRE') && !cellStr.includes('CURSO') && !cellStr.includes('BATERIA')) {
+                let nextVal = String(row[c + 1] || '').trim();
+                if (!nextVal) nextVal = cellStr.replace(/^NOMBRE:?\s*/i, '').trim();
+                if (nextVal && !extractedName) extractedName = nextVal;
+            }
+            if (cellStr.includes('PUESTO')) {
+                let nextVal = String(row[c + 1] || '').trim();
+                if (!nextVal) nextVal = cellStr.replace(/^PUESTO:?\s*/i, '').trim();
+                if (nextVal && !extractedPuesto) extractedPuesto = nextVal;
+            }
+            if (cellStr.includes('CURPO') || cellStr.includes('CURP')) {
+                let nextVal = String(row[c + 1] || '').trim();
+                if (!nextVal) nextVal = cellStr.replace(/^CURP:?\s*/i, '').trim();
+                if (nextVal && !extractedCurp) extractedCurp = nextVal;
+            }
+        }
+    }
+
+    let workerName = extractedName || fallbackName;
+
+    // Detectar encabezados de la tabla de cursos
+    let courseColIdx = -1;
+    let hoursColIdx = -1;
+    let dateColIdx = -1;
+    let headerRowIdx = -1;
+
+    const cleanH = (val) => String(val || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+
+    for (let i = 0; i < Math.min(25, rawRows.length); i++) {
+        const row = rawRows[i];
+        if (row) {
+            const cIdx = row.findIndex(h => {
+                const val = cleanH(h);
+                return val.includes('CURSO') || val.includes('MATERIA');
+            });
+            const dIdx = row.findIndex(h => {
+                const val = cleanH(h);
+                return val.includes('FECHA') || (val.includes('ACREDITAC') && !val.includes('MODO')) || val.includes('TERMINO') || val.includes('FIN');
+            });
+            if (cIdx !== -1 && dIdx !== -1) {
+                headerRowIdx = i;
+                courseColIdx = cIdx;
+                dateColIdx = dIdx;
+                const hIdx = row.findIndex(h => {
+                    const val = cleanH(h);
+                    return val.includes('HORAS') || val.includes('DURACION') || val.includes('HRS');
+                });
+                if (hIdx !== -1) hoursColIdx = hIdx;
+                break;
+            }
+        }
+    }
+
+    const courses = [];
+    if (headerRowIdx !== -1) {
+        for (let r = headerRowIdx + 1; r < rawRows.length; r++) {
+            const row = rawRows[r];
+            if (!row) continue;
+            const rawCourse = courseColIdx !== -1 ? row[courseColIdx] : null;
+            if (!rawCourse) continue;
+            const cName = String(rawCourse).trim();
+            if (!cName || cName.toUpperCase() === 'NOMBRE DEL CURSO' || cName.toUpperCase() === 'TOTAL') continue;
+
+            let hrs = 8;
+            if (hoursColIdx !== -1 && row[hoursColIdx]) {
+                const parsedHrs = parseInt(row[hoursColIdx]);
+                if (!isNaN(parsedHrs) && parsedHrs > 0) hrs = parsedHrs;
+            }
+
+            let endDate = null;
+            if (dateColIdx !== -1 && row[dateColIdx]) {
+                endDate = parseExcelDate(row[dateColIdx]);
+            }
+
+            courses.push({
+                name: cName,
+                hours: hrs,
+                area: '2600-EDUCACION',
+                puestoType: 'CAPPA',
+                endDate: endDate
+            });
+        }
+    }
+
+    return {
+        workerName: workerName.trim().toUpperCase(),
+        rpe: extractedRpe,
+        puesto: extractedPuesto,
+        curp: extractedCurp,
+        courses: courses
+    };
+}
+
+// Helper: Sincronizar trabajadores desde archivos Kardex si no hay lista de créditos o si fueron cargados
 function syncWorkersFromHistory() {
     const historyWorkerNames = Object.keys(AppState.historyFiles);
     if (historyWorkerNames.length === 0) return;
 
-    const existingNamesMap = new Set((AppState.workers || []).map(w => w.name.toUpperCase()));
+    let addedOrUpdated = false;
+    historyWorkerNames.forEach(wKey => {
+        const rawRows = AppState.historyFiles[wKey];
+        const parsed = extractKardexData(rawRows, wKey);
+        const nameToUse = parsed.workerName || wKey.trim().toUpperCase();
 
-    let added = false;
-    historyWorkerNames.forEach(wName => {
-        const cleanName = wName.trim().toUpperCase();
-        if (cleanName && !existingNamesMap.has(cleanName)) {
-            existingNamesMap.add(cleanName);
-            AppState.workers.push({
-                name: cleanName,
-                curp: '',
-                cappa: '',
+        let worker = (AppState.workers || []).find(w => w.name.toUpperCase() === nameToUse);
+        if (!worker) {
+            worker = {
+                name: nameToUse,
+                curp: parsed.curp || '',
+                cappa: parsed.puesto || '',
                 cappi: '',
-                rpe: '',
+                puesto: parsed.puesto || '',
+                rpe: parsed.rpe || '',
                 requiredCourses: []
-            });
-            added = true;
+            };
+            AppState.workers.push(worker);
+            addedOrUpdated = true;
+        } else {
+            if (parsed.rpe && !worker.rpe) { worker.rpe = parsed.rpe; addedOrUpdated = true; }
+            if (parsed.puesto && !worker.puesto) {
+                worker.puesto = parsed.puesto;
+                if (!worker.cappa) worker.cappa = parsed.puesto;
+                addedOrUpdated = true;
+            }
+            if (parsed.curp && !worker.curp) { worker.curp = parsed.curp; addedOrUpdated = true; }
         }
+
+        parsed.courses.forEach(kc => {
+            const isDup = worker.requiredCourses.some(rc => cleanCourseName(rc.name) === cleanCourseName(kc.name));
+            if (!isDup) {
+                worker.requiredCourses.push(kc);
+                addedOrUpdated = true;
+            } else if (kc.endDate) {
+                const ex = worker.requiredCourses.find(rc => cleanCourseName(rc.name) === cleanCourseName(kc.name));
+                if (ex && !ex.endDate) { ex.endDate = kc.endDate; addedOrUpdated = true; }
+            }
+        });
     });
 
-    if (added) {
+    if (addedOrUpdated) {
         AppState.workers.sort((a, b) => String(a.name).localeCompare(String(b.name), 'es', { sensitivity: 'base' }));
         renderWorkerList();
     }
@@ -868,7 +1032,7 @@ function switchTab(tabId) {
 
         if (!hasWorkers || !hasTemplate) {
             let missing = [];
-            if (!hasWorkers) missing.push("1. Archivo de Créditos (.xlsx) con trabajadores");
+            if (!hasWorkers) missing.push("1. Archivos de Trabajadores (.xlsx)");
             if (!hasTemplate) missing.push("2. Plantilla Word CCHL (.docx)");
             showNotification(`No se puede abrir el Generador CCHL.\nFalta cargar: ${missing.join(' y ')}.`, true);
             return;
@@ -1616,7 +1780,75 @@ function resetInstructorsToDefault() {
         renderCoursesTableForActiveWorker();
         refreshActiveCoursePreview();
     }
-    showNotification("Catálogo restablecido a los 38 instructores oficiales.");
+    showNotification("Catálogo restaurado a los 38 instructores oficiales.");
+}
+
+function importInstructorsFromExcel(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            if (!json || json.length === 0) {
+                showNotification("El archivo Excel está vacío.", true);
+                return;
+            }
+            // Encontrar columna de NOMBRE / INSTRUCTOR
+            let nameCol = -1;
+            let startRow = 0;
+            for (let r = 0; r < Math.min(10, json.length); r++) {
+                const row = json[r] || [];
+                for (let c = 0; c < row.length; c++) {
+                    const val = String(row[c] || '').toUpperCase();
+                    if (val.includes('NOMBRE') || val.includes('INSTRUCTOR') || val.includes('CAPACITADOR')) {
+                        nameCol = c;
+                        startRow = r + 1;
+                        break;
+                    }
+                }
+                if (nameCol !== -1) break;
+            }
+            if (nameCol === -1) {
+                nameCol = 0;
+            }
+
+            const names = [];
+            for (let r = startRow; r < json.length; r++) {
+                const row = json[r];
+                if (!row) continue;
+                const cellVal = row[nameCol];
+                if (cellVal && typeof cellVal === 'string' && cellVal.trim().length > 2) {
+                    const clean = cellVal.trim().toUpperCase();
+                    if (!clean.includes('NOMBRE') && !clean.includes('INSTRUCTOR') && !names.includes(clean)) {
+                        names.push(clean);
+                    }
+                }
+            }
+
+            if (names.length === 0) {
+                showNotification("No se encontraron nombres de instructores en el archivo.", true);
+                return;
+            }
+
+            AppState.instructors = normalizeInstructorCatalog(names);
+            localStorage.setItem('cfe_instructors_catalog', JSON.stringify(AppState.instructors));
+            localStorage.setItem('cfe_instructors_version_v38', 'true');
+            updateInstructorsDatalist();
+            renderInstructorsManager();
+            if (AppState.selectedWorker) {
+                renderCoursesTableForActiveWorker();
+                refreshActiveCoursePreview();
+            }
+            showNotification(`Se importaron ${AppState.instructors.length} instructores desde Excel con éxito.`);
+        } catch (err) {
+            console.error("Error al importar instructores:", err);
+            showNotification("Error al procesar el archivo Excel.", true);
+        }
+    };
+    reader.readAsArrayBuffer(file);
 }
 
 
@@ -1678,45 +1910,46 @@ function resetUploadZone(zoneId, defaultDesc) {
     if (input) input.value = '';
 }
 
-// 2. CREDITOS
-function processCreditsFile(fileBuffer, fileName) {
+// 2. CREDITOS / CCHL
+function processCreditsFile(fileBuffer, fileName, isMultiBatch = false, isLastFile = true) {
     try {
         extractSignaturesFromExcelBuffer(fileBuffer, fileName);
         const data = new Uint8Array(fileBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
 
         let workersMap = {};
-
-        // Buscar hojas específicas (CAPPA / CAPPI / ACTUAL / INMEDIATO)
-        let targetSheets = workbook.SheetNames.filter(sheetName => {
-            const upper = sheetName.toUpperCase();
-            return upper.includes('CAPPA') || upper.includes('ACTUAL') || upper.includes('CAPPI') || upper.includes('INMEDIATO');
-        });
-
-        // Si no existen pestañas con esos nombres exactos, analizar TODAS las pestañas del libro
-        if (targetSheets.length === 0) {
-            targetSheets = workbook.SheetNames;
+        if (rawCreditsWorkers && rawCreditsWorkers.length > 0) {
+            rawCreditsWorkers.forEach(w => {
+                workersMap[w.name.toUpperCase()] = w;
+            });
         }
+
+        // Leer TODAS las hojas del libro (sin restringir a CAPPA/CAPPI)
+        let targetSheets = workbook.SheetNames;
 
         targetSheets.forEach(sheetName => {
             const upperSheet = sheetName.toUpperCase();
             let type = 'CAPPA';
             if (upperSheet.includes('CAPPI') || upperSheet.includes('INMEDIATO')) {
                 type = 'CAPPI';
+            } else if (upperSheet.includes('CAPPA') || upperSheet.includes('ACTUAL')) {
+                type = 'CAPPA';
+            } else {
+                type = sheetName.trim();
             }
 
             const worksheet = workbook.Sheets[sheetName];
             const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
             if (!rawRows || rawRows.length === 0) return;
 
-            // Encontrar fila de encabezados en las primeras 10 filas
+            // Encontrar fila de encabezados en las primeras 15 filas
             let headerRowIdx = -1;
             let headerRow = [];
-            for (let i = 0; i < Math.min(10, rawRows.length); i++) {
+            for (let i = 0; i < Math.min(15, rawRows.length); i++) {
                 const row = rawRows[i];
                 if (row && row.some(cell => {
-                    const val = String(cell || '').toUpperCase();
-                    return val.includes('CURP') || val.includes('NOMBRE') || val.includes('CURSO') || val.includes('RPE') || val.includes('RPU');
+                    const val = String(cell || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+                    return val.includes('CURP') || val.includes('NOMBRE') || val.includes('CURSO') || val.includes('RPE') || val.includes('RPU') || val.includes('TRABAJADOR');
                 })) {
                     headerRowIdx = i;
                     headerRow = row;
@@ -1725,45 +1958,52 @@ function processCreditsFile(fileBuffer, fileName) {
             }
 
             if (headerRowIdx === -1) {
-                headerRowIdx = 0;
-                headerRow = rawRows[0] || [];
+                const r0Str = (rawRows[0] || []).join(' ').toUpperCase();
+                if (r0Str.includes('RPE') || r0Str.includes('NOMBRE') || r0Str.includes('CURSO')) {
+                    headerRowIdx = 0;
+                    headerRow = rawRows[0] || [];
+                } else {
+                    return;
+                }
             }
 
-            let nameColIdx = headerRow.findIndex(h => {
-                const val = String(h || '').toUpperCase();
-                return val.includes('NOMBRE') || val.includes('COMPLETO') || val.includes('TRABAJADOR');
-            });
-            if (nameColIdx === -1) nameColIdx = 1; // Columna B
+            const cleanH = (h) => String(h || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 
-            let curpColIdx = headerRow.findIndex(h => String(h || '').toUpperCase().includes('CURP'));
-            if (curpColIdx === -1) curpColIdx = 2; // Columna C
+            let nameColIdx = headerRow.findIndex(h => {
+                const val = cleanH(h);
+                return (val.includes('NOMBRE') && !val.includes('CURSO') && !val.includes('BATERIA')) || val.includes('COMPLETO') || val.includes('TRABAJADOR');
+            });
+            if (nameColIdx === -1) nameColIdx = 1;
+
+            let curpColIdx = headerRow.findIndex(h => cleanH(h).includes('CURP'));
+            if (curpColIdx === -1) curpColIdx = 2;
 
             let rpeColIdx = headerRow.findIndex(h => {
-                const val = String(h || '').toUpperCase();
+                const val = cleanH(h);
                 return val.includes('RPE') || val.includes('RPU') || val.includes('REGISTRO');
             });
-            if (rpeColIdx === -1) rpeColIdx = 0; // Columna A (RPE/RPU)
+            if (rpeColIdx === -1) rpeColIdx = 0;
 
             let puestoColIdx = headerRow.findIndex(h => {
-                const val = String(h || '').toUpperCase();
+                const val = cleanH(h);
                 return val.includes('BATERIA') || val.includes('PUESTO');
             });
-            if (puestoColIdx === -1) puestoColIdx = 3; // Columna D (NOMBRE DE BATERIA)
+            if (puestoColIdx === -1) puestoColIdx = 3;
 
             let courseColIdx = headerRow.findIndex(h => {
-                const val = String(h || '').toUpperCase();
-                return val.includes('CURSO') || val.includes('MATERIA') || val.includes('NOMBRE DEL CURSO');
+                const val = cleanH(h);
+                return val.includes('CURSO') || val.includes('MATERIA');
             });
-            if (courseColIdx === -1) courseColIdx = 4; // Columna E (NOMBRE DEL CURSO)
+            if (courseColIdx === -1) courseColIdx = 4;
 
             let hoursColIdx = headerRow.findIndex(h => {
-                const val = String(h || '').toUpperCase();
-                return val.includes('HORAS') || val.includes('DURACION') || val.includes('HORAS TOTALES');
+                const val = cleanH(h);
+                return val.includes('HORAS') || val.includes('DURACION') || val.includes('HRS');
             });
-            if (hoursColIdx === -1) hoursColIdx = 5; // Columna F (HORAS TOTALES DEL CURSO)
+            if (hoursColIdx === -1) hoursColIdx = 5;
 
             let areaColIdx = headerRow.findIndex(h => {
-                const val = String(h || '').toUpperCase();
+                const val = cleanH(h);
                 return val.includes('AREA') || val.includes('TEMATICA');
             });
 
@@ -1773,7 +2013,7 @@ function processCreditsFile(fileBuffer, fileName) {
                 if (!row || row.length === 0) continue;
 
                 let name = nameColIdx < row.length ? String(row[nameColIdx] || '').trim().toUpperCase() : '';
-                if (!name || name === 'NOMBRE COMPLETO' || name === 'NOMBRE' || name === 'APELLIDO' || name === 'TRABAJADOR') continue;
+                if (!name || name === 'NOMBRE COMPLETO' || name === 'NOMBRE' || name === 'APELLIDO' || name === 'TRABAJADOR' || name === 'TOTAL') continue;
 
                 let curp = curpColIdx < row.length ? String(row[curpColIdx] || '').trim().toUpperCase() : '';
                 let rpe = rpeColIdx < row.length ? String(row[rpeColIdx] || '').trim().toUpperCase() : '';
@@ -1791,6 +2031,7 @@ function processCreditsFile(fileBuffer, fileName) {
                         curp: curp,
                         cappa: '',
                         cappi: '',
+                        puesto: puestoVal,
                         rpe: rpe,
                         requiredCourses: []
                     };
@@ -1799,22 +2040,26 @@ function processCreditsFile(fileBuffer, fileName) {
                 if (curp && !workersMap[name].curp) workersMap[name].curp = curp;
                 if (rpe && !workersMap[name].rpe) workersMap[name].rpe = rpe;
 
-                if (type === 'CAPPA') {
-                    workersMap[name].cappa = puestoVal;
-                } else if (type === 'CAPPI') {
-                    workersMap[name].cappi = puestoVal;
+                if (puestoVal) {
+                    if (type === 'CAPPA') workersMap[name].cappa = puestoVal;
+                    else if (type === 'CAPPI') workersMap[name].cappi = puestoVal;
+                    if (!workersMap[name].puesto) workersMap[name].puesto = puestoVal;
+                    if (!workersMap[name].cappa) workersMap[name].cappa = puestoVal;
                 }
 
                 if (courseName) {
                     const isDup = workersMap[name].requiredCourses.some(rc =>
-                        rc.name.toUpperCase() === courseName.toUpperCase() && rc.puestoType === type
+                        rc.name.toUpperCase() === courseName.toUpperCase() &&
+                        rc.puestoType === type &&
+                        (rc.bateria || '').toUpperCase() === puestoVal.toUpperCase()
                     );
                     if (!isDup) {
                         workersMap[name].requiredCourses.push({
                             name: courseName,
                             hours: hours,
                             area: area,
-                            puestoType: type
+                            puestoType: type,
+                            bateria: puestoVal
                         });
                     }
                 }
@@ -1823,40 +2068,48 @@ function processCreditsFile(fileBuffer, fileName) {
 
         rawCreditsWorkers = Object.values(workersMap);
 
-        if (rawCreditsWorkers.length === 0) {
-            showNotification(`No se encontraron trabajadores en "${fileName}". Verifica el contenido del Excel.`, true);
-            resetUploadZone('zone-courses', 'Arrastra el archivo de Créditos (CAPPA/CAPPI) o haz clic para buscar');
-        } else {
-            showNotification(`Se cargaron ${rawCreditsWorkers.length} trabajadores de Créditos.`);
-            setUploadZoneLoaded('zone-courses', fileName);
-            mergeWorkersData();
-        }
+        if (isLastFile) {
+            if (rawCreditsWorkers.length === 0) {
+                showNotification(`No se encontraron trabajadores en "${fileName}". Verifica el contenido del Excel.`, true);
+                resetUploadZone('zone-courses', 'Arrastra archivo(s) de Créditos / CCHL o haz clic para buscar');
+            } else {
+                showNotification(`Se cargaron ${rawCreditsWorkers.length} trabajadores de Créditos/CCHL sin restricciones.`);
+                if (!isMultiBatch) {
+                    setUploadZoneLoaded('zone-courses', fileName);
+                }
+                mergeWorkersData();
+            }
 
-        // continuity: check last selected worker
-        const lastWorkerName = localStorage.getItem('cfe_last_selected_worker');
-        if (lastWorkerName && AppState.workers.length > 0) {
-            const worker = AppState.workers.find(w => w.name === lastWorkerName);
-            if (worker) {
-                setTimeout(() => {
-                    selectWorker(worker, false);
-                }, 100);
+            const lastWorkerName = localStorage.getItem('cfe_last_selected_worker');
+            if (lastWorkerName && AppState.workers.length > 0) {
+                const worker = AppState.workers.find(w => w.name === lastWorkerName);
+                if (worker) {
+                    setTimeout(() => {
+                        selectWorker(worker, false);
+                    }, 100);
+                }
             }
         }
     } catch (err) {
-        showNotification(`Error al leer CREDITOS: ${err.message}`, true);
+        showNotification(`Error al leer archivo: ${err.message}`, true);
     }
 }
 
-setupUploadZone('zone-courses', 'input-courses', (files) => {
-    const file = files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        const buffer = e.target.result;
-        processCreditsFile(buffer, file.name);
-        await saveAsset('credits_file', file.name, buffer);
-    };
-    reader.readAsArrayBuffer(file);
+setupUploadZone('zone-courses', 'input-courses', async (files) => {
+    if (!files || files.length === 0) return;
+    const filesArray = Array.from(files);
+    for (let i = 0; i < filesArray.length; i++) {
+        const file = filesArray[i];
+        const isLast = (i === filesArray.length - 1);
+        const buffer = await file.arrayBuffer();
+        processCreditsFile(buffer, file.name, filesArray.length > 1, isLast);
+        if (i === 0) {
+            await saveAsset('credits_file', file.name, buffer);
+        }
+    }
+    if (filesArray.length > 1) {
+        setUploadZoneLoaded('zone-courses', `${filesArray.length} archivos de Créditos cargados`);
+    }
 });
 
 function updateInstructorsList(namesArray) {
@@ -1966,14 +2219,13 @@ async function parseHistoryFiles(files) {
                 let selectedSheet = null;
                 let rawRows = [];
 
-                // Search all sheets in workbook for Kardex columns
+                // Buscar en todas las hojas la que tenga datos de cursos / Kardex
                 for (const sheetName of workbook.SheetNames) {
                     const sheet = workbook.Sheets[sheetName];
-                    
                     let rows = [];
                     if (sheet['!ref']) {
                         const range = XLSX.utils.decode_range(sheet['!ref']);
-                        range.s.c = 0; // Force parse starting at Column A
+                        range.s.c = 0;
                         rows = XLSX.utils.sheet_to_json(sheet, { header: 1, range: range });
                     } else {
                         rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
@@ -2012,31 +2264,73 @@ async function parseHistoryFiles(files) {
                     selectedSheet = workbook.Sheets[workbook.SheetNames[0]];
                     if (selectedSheet['!ref']) {
                         const range = XLSX.utils.decode_range(selectedSheet['!ref']);
-                        range.s.c = 0; // Force parse starting at Column A
+                        range.s.c = 0;
                         rawRows = XLSX.utils.sheet_to_json(selectedSheet, { header: 1, range: range });
                     } else {
                         rawRows = XLSX.utils.sheet_to_json(selectedSheet, { header: 1 });
                     }
                 }
 
-                // Extract worker name from filename
-                let workerName = file.name.replace(/\.[^/.]+$/, "").trim().toUpperCase();
+                const fallbackFileName = file.name.replace(/\.[^/.]+$/, "").trim().toUpperCase();
+                const parsed = extractKardexData(rawRows, fallbackFileName);
+                const workerName = parsed.workerName || fallbackFileName;
+
+                // 3. Registrar o actualizar trabajador en AppState.workers
+                let worker = (AppState.workers || []).find(w => w.name.toUpperCase() === workerName.toUpperCase());
+                if (!worker) {
+                    worker = {
+                        name: workerName,
+                        curp: parsed.curp || '',
+                        cappa: parsed.puesto || '',
+                        cappi: '',
+                        puesto: parsed.puesto || '',
+                        rpe: parsed.rpe || '',
+                        requiredCourses: []
+                    };
+                    AppState.workers.push(worker);
+                } else {
+                    if (parsed.rpe && !worker.rpe) worker.rpe = parsed.rpe;
+                    if (parsed.puesto) {
+                        if (!worker.puesto) worker.puesto = parsed.puesto;
+                        if (!worker.cappa) worker.cappa = parsed.puesto;
+                    }
+                    if (parsed.curp && !worker.curp) worker.curp = parsed.curp;
+                }
+
+                // 4. Agregar cursos extraídos del archivo CCHL/Kardex al trabajador
+                parsed.courses.forEach(kc => {
+                    const isDup = worker.requiredCourses.some(rc => cleanCourseName(rc.name) === cleanCourseName(kc.name));
+                    if (!isDup) {
+                        worker.requiredCourses.push(kc);
+                    } else if (kc.endDate) {
+                        const existingCourse = worker.requiredCourses.find(rc => cleanCourseName(rc.name) === cleanCourseName(kc.name));
+                        if (existingCourse && !existingCourse.endDate) {
+                            existingCourse.endDate = kc.endDate;
+                        }
+                    }
+                });
+
+                if (!rawCreditsWorkers.some(rw => rw.name.toUpperCase() === worker.name.toUpperCase())) {
+                    rawCreditsWorkers.push(worker);
+                }
 
                 AppState.historyFiles[workerName] = rawRows;
                 await saveKardexFile(workerName, file.name, rawRows);
                 processed++;
 
                 if (processed === total) {
-                    statusTextHistory.textContent = `${Object.keys(AppState.historyFiles).length} trabajadores con Kardex cargados`;
+                    statusTextHistory.textContent = `${Object.keys(AppState.historyFiles).length} trabajadores con CCHL/Kardex cargados`;
                     statusDotHistory.classList.add('active');
-                    showNotification(`Se cargaron y procesaron ${total} archivos de Kardex.`);
+                    showNotification(`Se cargaron y procesaron ${total} archivos de CCHL/Kardex.`);
 
-                    syncWorkersFromHistory();
+                    AppState.workers.sort((a, b) => String(a.name).localeCompare(String(b.name), 'es', { sensitivity: 'base' }));
+                    renderWorkerList();
                     checkInitState();
 
                     // Re-render courses if worker is currently selected
                     if (AppState.selectedWorker) {
-                        selectWorker(AppState.selectedWorker, false);
+                        const reloaded = AppState.workers.find(w => w.name.toUpperCase() === AppState.selectedWorker.name.toUpperCase());
+                        if (reloaded) selectWorker(reloaded, false);
                     }
                 }
             } catch (err) {
@@ -2267,15 +2561,16 @@ function selectWorker(worker, resetSelection = true) {
     actWorkerName.textContent = wName;
     actWorkerCurp.textContent = wCurp;
     actWorkerRpeBadge.textContent = `RPE: ${wRpe}`;
-    actWorkerCappa.textContent = wCappa || 'Sin Puesto Asignado';
-    actWorkerCappi.textContent = wCappi || 'Sin Puesto Asignado';
+    const wPuesto = worker.puesto || worker.cappa || worker.cappi || '';
+    actWorkerCappa.textContent = worker.cappa || wPuesto || 'Sin Puesto Asignado';
+    actWorkerCappi.textContent = worker.cappi || (worker.cappa ? '--' : wPuesto) || 'Sin Puesto Asignado';
 
     // Load saved Number of Puesto or extract default
     const savedPuestoNum = localStorage.getItem(`cfe_puesto_num_${wName}`);
     if (savedPuestoNum) {
         actWorkerPuestoNum.value = savedPuestoNum;
     } else {
-        actWorkerPuestoNum.value = extractOccupationCode(wCappa || wCappi);
+        actWorkerPuestoNum.value = extractOccupationCode(wPuesto || worker.cappa || worker.cappi);
     }
 
     // Validate worker data (CURP & Puesto)
@@ -2409,13 +2704,29 @@ function loadCoursesForSelectedWorker(resetSelection) {
     }
 
     // Combine required courses (Excel) and manual courses (localStorage)
+    let requiredCoursesList = worker.requiredCourses || [];
+    if (requiredCoursesList.length === 0 && historyData) {
+        const parsedHist = extractKardexData(historyData, worker.name);
+        if (parsedHist.courses && parsedHist.courses.length > 0) {
+            requiredCoursesList = parsedHist.courses;
+            worker.requiredCourses = parsedHist.courses;
+            if (parsedHist.puesto && !worker.puesto) {
+                worker.puesto = parsedHist.puesto;
+                if (!worker.cappa) worker.cappa = parsedHist.puesto;
+            }
+            if (parsedHist.rpe && !worker.rpe) worker.rpe = parsedHist.rpe;
+            if (parsedHist.curp && !worker.curp) worker.curp = parsedHist.curp;
+        }
+    }
+
     const combined = [];
-    required.forEach(c => {
+    requiredCoursesList.forEach(c => {
         combined.push({
             name: c.name,
             hours: c.hours,
             area: c.area,
             puestoType: c.puestoType,
+            bateria: c.bateria || '',
             isManual: false
         });
     });
@@ -2437,7 +2748,7 @@ function loadCoursesForSelectedWorker(resetSelection) {
 
     combined.forEach((req, idx) => {
         const cleanReqName = cleanCourseName(req.name);
-        let endDate = kardexCoursesMap[cleanReqName] || null;
+        let endDate = req.endDate ? (req.endDate instanceof Date ? req.endDate : new Date(req.endDate)) : (kardexCoursesMap[cleanReqName] || null);
 
         // Fuzzy matches check in Kardex
         if (!endDate) {
@@ -2521,7 +2832,7 @@ function renderCoursesTableForActiveWorker() {
         tableCoursesBody.innerHTML = `
             <tr>
                 <td colspan="7" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 20px 0;">
-                    Este trabajador no tiene cursos requeridos en las hojas CAPPA/CAPPI de CREDITOS.
+                    No hay cursos registrados para este trabajador. Sube los archivos de Créditos o CCHL/Kardex, o agrégalos con el botón "+ Agregar Curso".
                 </td>
             </tr>`;
         btnGenerateSingle.disabled = true;
@@ -2547,19 +2858,21 @@ function renderCoursesTableForActiveWorker() {
             instOptionsHtml += `<option value="${inst}" ${isSel ? 'selected' : ''}>${inst}</option>`;
         });
 
-        let nameCellHtml = course.name;
+        let nameCellHtml = `<div style="display:flex; flex-direction:column; gap:2px;"><div style="display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap;"><span>${course.name}</span>`;
         if (course.isManual) {
-            nameCellHtml = `
-                <span style="display:inline-flex; align-items:center; gap:6px; flex-wrap:nowrap;">
-                    ${course.name}
-                    <button onclick="event.stopPropagation(); deleteManualCourse('${course.name}', '${course.puestoType}')" class="btn btn-secondary" style="padding: 2px 4px; min-height: unset; background: rgba(248, 113, 113, 0.1); border-color: rgba(248, 113, 113, 0.2); color: #fca5a5; display: inline-flex;" title="Eliminar Curso Manual">
-                        <svg viewBox="0 0 24 24" style="width: 10px; height: 10px; fill: currentColor;">
-                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                        </svg>
-                    </button>
-                </span>
+            nameCellHtml += `
+                <button onclick="event.stopPropagation(); deleteManualCourse('${course.name}', '${course.puestoType}')" class="btn btn-secondary" style="padding: 2px 4px; min-height: unset; background: rgba(248, 113, 113, 0.1); border-color: rgba(248, 113, 113, 0.2); color: #fca5a5; display: inline-flex;" title="Eliminar Curso Manual">
+                    <svg viewBox="0 0 24 24" style="width: 10px; height: 10px; fill: currentColor;">
+                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                    </svg>
+                </button>
             `;
         }
+        nameCellHtml += `</div>`;
+        if (course.bateria) {
+            nameCellHtml += `<span style="font-size:10px; color:var(--text-muted); font-weight:500;">Batería: ${course.bateria}</span>`;
+        }
+        nameCellHtml += `</div>`;
 
         tr.innerHTML = `
             <td style="text-align:center;">
@@ -2601,27 +2914,69 @@ function renderCoursesTableForActiveWorker() {
         tableCoursesBody.appendChild(tr);
     });
 
+        // Update filter counts
+    const totalAll = AppState.workerCoursesList.length;
+    const totalCappa = AppState.workerCoursesList.filter(c => c.puestoType === 'CAPPA').length;
+    const totalCappi = AppState.workerCoursesList.filter(c => c.puestoType === 'CAPPI').length;
+
+    const elAll = document.getElementById('count-filter-all');
+    if (elAll) elAll.textContent = totalAll;
+    const elCappa = document.getElementById('count-filter-cappa');
+    if (elCappa) elCappa.textContent = totalCappa;
+    const elCappi = document.getElementById('count-filter-cappi');
+    if (elCappi) elCappi.textContent = totalCappi;
+
     updateSelectedCount();
 }
 
-// Filter courses table dynamically based on search input
+let activeCourseFilterType = 'all';
+
+function setCourseFilterType(type) {
+    activeCourseFilterType = type;
+    document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+    const btnId = `btn-filter-${type.toLowerCase()}`;
+    const activeBtn = document.getElementById(btnId);
+    if (activeBtn) activeBtn.classList.add('active');
+    filterCoursesTable();
+}
+
+// Filter courses table dynamically based on search input and filter pill
 function filterCoursesTable() {
-    const query = document.getElementById('search-courses-input').value.toLowerCase().trim();
+    const query = (document.getElementById('search-courses-input').value || '').toLowerCase().trim();
     const rows = document.querySelectorAll('#table-courses-dashboard-body tr');
 
     rows.forEach(row => {
-        // Skip if it is the default empty row (with colspan=7)
         if (row.cells.length === 1 && row.cells[0].colSpan === 7) return;
 
-        const courseCell = row.querySelector('.course-cell-click');
-        if (courseCell) {
-            const name = courseCell.textContent.toLowerCase();
-            if (name.includes(query)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
+        const courseIdStr = row.id.replace('course-row-', '');
+        const courseId = parseInt(courseIdStr);
+        const course = AppState.workerCoursesList.find(c => c.id === courseId);
+
+        const nameText = (course ? (course.name + ' ' + (course.bateria || '')) : row.textContent).toLowerCase();
+        const matchesQuery = !query || nameText.includes(query);
+        const matchesType = (activeCourseFilterType === 'all') || (course && course.puestoType === activeCourseFilterType);
+
+        if (matchesQuery && matchesType) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
         }
+    });
+}
+
+function toggleAllVisibleCourses(selectState) {
+    const rows = document.querySelectorAll('#table-courses-dashboard-body tr');
+    rows.forEach(row => {
+        if (row.style.display === 'none') return;
+        if (row.cells.length === 1 && row.cells[0].colSpan === 7) return;
+        const courseId = parseInt(row.id.replace('course-row-', ''));
+        const chk = row.querySelector('input[type="checkbox"]');
+        if (chk) {
+            chk.checked = selectState;
+            toggleCourseSelection(courseId, selectState);
+        }
+    });
+    updateSelectedCount();
     });
 }
 
@@ -2700,8 +3055,8 @@ function updateCourseEndDate(id, val) {
 function triggerSingleRandomDate(id) {
     const course = AppState.workerCoursesList.find(c => c.id === id);
     if (course) {
-        const minYear = parseInt(document.getElementById('config-rand-min-year').value) || 2024;
-        const maxYear = parseInt(document.getElementById('config-rand-max-year').value) || 2026;
+        const minYear = parseInt(document.getElementById('config-rand-min-year').value) || 2016;
+        const maxYear = parseInt(document.getElementById('config-rand-max-year').value) || 2025;
         const randDate = generateRandomWeekday(minYear, maxYear);
 
         course.endDate = randDate;
@@ -2732,8 +3087,8 @@ function triggerSingleRandomDate(id) {
 function generateRandomDatesForEmptyCourses() {
     if (!AppState.selectedWorker || AppState.workerCoursesList.length === 0) return;
 
-    const minYear = parseInt(document.getElementById('config-rand-min-year').value) || 2024;
-    const maxYear = parseInt(document.getElementById('config-rand-max-year').value) || 2026;
+    const minYear = parseInt(document.getElementById('config-rand-min-year').value) || 2016;
+    const maxYear = parseInt(document.getElementById('config-rand-max-year').value) || 2025;
 
     let updated = 0;
     AppState.workerCoursesList.forEach(course => {
@@ -2829,18 +3184,25 @@ function updateLivePreview(wName, wCurp, course) {
     const puestoNum = actWorkerPuestoNum.value.trim() || extractOccupationCode(cappaVal || cappiVal);
 
     let displayPuesto = '--';
+    let currentPuestoNum = puestoNum;
     if (course) {
-        displayPuesto = course.puestoType === 'CAPPA' ? extractOccupationName(cappaVal) : extractOccupationName(cappiVal);
+        displayPuesto = (course.bateria ? extractOccupationName(course.bateria) : '') ||
+                        (course.puestoType === 'CAPPI' ? extractOccupationName(cappiVal) : extractOccupationName(cappaVal)) ||
+                        extractOccupationName(AppState.selectedWorker ? AppState.selectedWorker.puesto : '') ||
+                        extractOccupationName(cappaVal || cappiVal) || '--';
+        if (course.bateria && extractOccupationCode(course.bateria) !== '464020200') {
+            currentPuestoNum = extractOccupationCode(course.bateria);
+        }
         document.getElementById('preview-course-type').textContent = course.puestoType;
         document.getElementById('preview-course-type').className = `badge ${course.puestoType === 'CAPPA' ? 'badge-cappa' : 'badge-cappi'}`;
     } else {
-        displayPuesto = extractOccupationName(cappaVal);
+        displayPuesto = extractOccupationName(cappaVal || cappiVal) || '--';
         document.getElementById('preview-course-type').textContent = '--';
         document.getElementById('preview-course-type').className = 'badge';
     }
 
     document.getElementById('prev-puesto').textContent = displayPuesto || '--';
-    document.getElementById('prev-occupation').textContent = `${puestoNum} - ${displayPuesto || '--'}`;
+    document.getElementById('prev-occupation').textContent = `${currentPuestoNum} - ${displayPuesto || '--'}`;
 
     // Static signatures config
     const patronRep = document.getElementById('config-patron-rep').value;
@@ -2957,8 +3319,12 @@ function buildCourseContext(course) {
     const workerRep = document.getElementById('config-worker-rep').value || localStorage.getItem('cfe_worker_rep') || "JUAN CARLOS SERNA GOMEZ";
     const companyName = document.getElementById('config-company').value || localStorage.getItem('cfe_company') || "COMISIÓN FEDERAL DE ELECTRICIDAD";
 
-    const puestoNum = actWorkerPuestoNum.value.trim() || extractOccupationCode(wCappa || wCappi);
-    const displayPuesto = course.puestoType === 'CAPPA' ? extractOccupationName(wCappa) : extractOccupationName(wCappi);
+    const displayPuesto = (course && course.bateria ? extractOccupationName(course.bateria) : '') || 
+                          (course && course.puestoType === 'CAPPI' ? extractOccupationName(wCappi) : extractOccupationName(wCappa)) || 
+                          extractOccupationName(worker.puesto || wCappa || wCappi) || 'PUESTO GENERAL';
+    const puestoNum = (course && course.bateria && extractOccupationCode(course.bateria) !== '464020200' ? extractOccupationCode(course.bateria) : '') || 
+                      actWorkerPuestoNum.value.trim() || 
+                      extractOccupationCode(wCappa || wCappi);
 
     const activeInstructor = course.instructorMode === 'random' ? course.randomInstructor : course.manualInstructor;
     const hasLegend = course.endDate && course.endDate.getFullYear() <= 2021;
@@ -3045,10 +3411,19 @@ async function generateMergedDocument() {
     }
 
     const selected = AppState.workerCoursesList.filter(c => selectedCourseIds.has(c.id));
-    const hasEmptyDates = selected.some(c => !c.endDate);
-    if (hasEmptyDates) {
-        showNotification("Todos los cursos seleccionados deben tener fechas asignadas.", true);
+    if (selected.length === 0) {
+        showNotification("No hay cursos seleccionados para generar el documento.", true);
         return;
+    }
+    const emptyCourses = selected.filter(c => !c.endDate);
+    if (emptyCourses.length > 0) {
+        const autoAssign = confirm(`Hay ${emptyCourses.length} curso(s) seleccionado(s) sin fecha de término.\n\n¿Deseas asignarles fechas hábiles aleatorias (2016-2025) automáticamente para continuar con la generación?`);
+        if (autoAssign) {
+            generateRandomDatesForEmptyCourses();
+        } else {
+            showNotification("Todos los cursos seleccionados deben tener fechas asignadas para continuar.", true);
+            return;
+        }
     }
 
     playSound('generate');
@@ -3128,10 +3503,19 @@ async function generateSeparateZipDocuments() {
     }
 
     const selected = AppState.workerCoursesList.filter(c => selectedCourseIds.has(c.id));
-    const hasEmptyDates = selected.some(c => !c.endDate);
-    if (hasEmptyDates) {
-        showNotification("Todos los cursos seleccionados deben tener fechas asignadas.", true);
+    if (selected.length === 0) {
+        showNotification("No hay cursos seleccionados para generar el documento.", true);
         return;
+    }
+    const emptyCourses = selected.filter(c => !c.endDate);
+    if (emptyCourses.length > 0) {
+        const autoAssign = confirm(`Hay ${emptyCourses.length} curso(s) seleccionado(s) sin fecha de término.\n\n¿Deseas asignarles fechas hábiles aleatorias (2016-2025) automáticamente para continuar con la generación?`);
+        if (autoAssign) {
+            generateRandomDatesForEmptyCourses();
+        } else {
+            showNotification("Todos los cursos seleccionados deben tener fechas asignadas para continuar.", true);
+            return;
+        }
     }
 
     playSound('generate');
@@ -3207,7 +3591,11 @@ function printSelectedCoursesAsPDF() {
 
     selected.forEach(course => {
         const formattedWorkerName = formatSurnamesFirst(wName).toUpperCase();
-        const displayPuesto = course.puestoType === 'CAPPA' ? extractOccupationName(cappaVal) : extractOccupationName(cappiVal);
+        const displayPuesto = (course.bateria ? extractOccupationName(course.bateria) : '') || 
+                              (course.puestoType === 'CAPPI' ? extractOccupationName(cappiVal) : extractOccupationName(cappaVal)) || 
+                              extractOccupationName(AppState.selectedWorker ? AppState.selectedWorker.puesto : '') || 
+                              extractOccupationName(cappaVal || cappiVal) || '--';
+        const coursePuestoNum = (course.bateria && extractOccupationCode(course.bateria) !== '464020200' ? extractOccupationCode(course.bateria) : '') || puestoNum;
         const activeInstructor = course.instructorMode === 'random' ? course.randomInstructor : course.manualInstructor;
         const hasLegend = course.endDate && course.endDate.getFullYear() <= 2021;
 
@@ -3297,7 +3685,7 @@ function printSelectedCoursesAsPDF() {
                         </div>
                         <div>
                             <div class="dc3-label">Ocupación específica (Catálogo Nacional)</div>
-                            <div class="dc3-val" style="font-size: 7.5px; line-height: 1;">${puestoNum} - ${displayPuesto || '--'}</div>
+                            <div class="dc3-val" style="font-size: 7.5px; line-height: 1;">${coursePuestoNum} - ${displayPuesto || '--'}</div>
                         </div>
                     </div>
                     <div class="dc3-row">
@@ -3649,3 +4037,16 @@ window.addEventListener('DOMContentLoaded', () => {
     initializeAlphabetGrid();
     restoreSavedState();
 });
+
+// Heartbeat para sincronización con el lanzador de escritorio local
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    setInterval(() => {
+        fetch('/api/heartbeat').catch(() => {});
+    }, 3000);
+
+    window.addEventListener('beforeunload', () => {
+        try {
+            navigator.sendBeacon('/api/shutdown');
+        } catch (e) {}
+    });
+}
