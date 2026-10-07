@@ -534,6 +534,10 @@ select.input-control {
     white-space: nowrap;
 }
 
+.upload-zone > *:not(.file-input) {
+    pointer-events: none;
+}
+
 .file-input {
     position: absolute;
     width: 100%;
@@ -542,6 +546,8 @@ select.input-control {
     left: 0;
     opacity: 0;
     cursor: pointer;
+    z-index: 10;
+    pointer-events: auto;
 }
 
 /* Buttons styling */

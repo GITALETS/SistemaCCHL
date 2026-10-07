@@ -826,7 +826,7 @@
                                     </button>
                                     <label class="btn btn-secondary" style="padding:4px 8px; font-size:11px; cursor:pointer;" title="Cargar instructores desde un archivo Excel como LISTADO GENERAL.xlsx">
                                         Importar Excel
-                                        <input type="file" id="input-instructors-excel" accept=".xlsx, .xls" style="display:none;" onchange="importInstructorsFromExcel(this.files[0])">
+                                        <input type="file" id="input-instructors-excel" accept=".xlsx, .xls" style="display:none;" onclick="this.value=''" onchange="importInstructorsFromExcel(this.files[0])">
                                     </label>
                                 </div>
                             </div>

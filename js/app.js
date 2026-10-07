@@ -152,6 +152,7 @@ async function resetDatabaseAction() {
         // Reset Upload Zones UI
         resetUploadZone('zone-courses', 'Arrastra el archivo de Créditos (CAPPA/CAPPI) o haz clic para buscar');
         resetUploadZone('zone-template', 'Arrastra la plantilla CCHL MODIFICABLE.docx');
+        resetUploadZone('zone-worker-history', 'Arrastra MÚLTIPLES archivos de Kardex o haz clic');
 
         // Clear detected tags
         const container = document.getElementById('detected-tags-container');
@@ -159,14 +160,9 @@ async function resetDatabaseAction() {
         if (container) container.innerHTML = '';
         if (label) label.style.display = 'none';
 
-        // Reset Kardex UI
-        statusTextHistory.textContent = '0 archivos de Kardex cargados';
-        statusDotHistory.classList.remove('active');
-        zoneHistory.classList.remove('success');
-        const fnEl = zoneHistory.querySelector('.file-name');
-        if (fnEl) zoneHistory.removeChild(fnEl);
-        const descEl = zoneHistory.querySelector('.desc');
-        if (descEl) descEl.style.display = 'block';
+        // Reset Kardex UI status
+        if (statusTextHistory) statusTextHistory.textContent = '0 archivos de Kardex cargados';
+        if (statusDotHistory) statusDotHistory.classList.remove('active');
 
         // Disable generate tab and manual course button
         checkInitState();
@@ -813,6 +809,12 @@ const searchWorkerInput = document.getElementById('search-worker-list');
 const filterStatusSelect = document.getElementById('filter-status-select');
 const workerListItemsContainer = document.getElementById('worker-list-items');
 
+// Kardex History upload elements
+const zoneHistory = document.getElementById('zone-worker-history');
+const inputHistory = document.getElementById('input-worker-history');
+const statusTextHistory = document.getElementById('status-text-history');
+const statusDotHistory = document.getElementById('status-dot-history');
+
 // Active Worker details elements
 const actWorkerName = document.getElementById('act-worker-name');
 const actWorkerCurp = document.getElementById('act-worker-curp');
@@ -1084,35 +1086,56 @@ function checkInitState() {
 function setupUploadZone(zoneId, inputId, parseCallback) {
     const zone = document.getElementById(zoneId);
     const input = document.getElementById(inputId);
+    if (!zone || !input) return;
+
+    // Reset value on click so selecting the exact same file fires 'change'
+    input.addEventListener('click', (e) => {
+        e.stopPropagation();
+        input.value = '';
+    });
+
+    // Delegate zone clicks to input
+    zone.addEventListener('click', (e) => {
+        if (e.target !== input) {
+            input.click();
+        }
+    });
 
     zone.addEventListener('dragover', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         zone.classList.add('dragover');
     });
 
-    zone.addEventListener('dragleave', () => {
+    zone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         zone.classList.remove('dragover');
     });
 
     zone.addEventListener('drop', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         zone.classList.remove('dragover');
-        if (e.dataTransfer.files.length > 0) {
-            input.files = e.dataTransfer.files;
-            handleFileSelect(input.files, zone, parseCallback);
+        const droppedFiles = e.dataTransfer.files;
+        if (droppedFiles && droppedFiles.length > 0) {
+            try {
+                input.files = droppedFiles;
+            } catch (_) {}
+            handleFileSelect(droppedFiles, zone, parseCallback);
         }
     });
 
     input.addEventListener('change', () => {
-        if (input.files.length > 0) {
+        if (input.files && input.files.length > 0) {
             handleFileSelect(input.files, zone, parseCallback);
         }
     });
 }
 
 function handleFileSelect(files, zone, parseCallback) {
+    if (!files || files.length === 0) return;
     const file = files[0];
-    if (!file) return;
 
     zone.classList.add('success');
     let fnEl = zone.querySelector('.file-name');
@@ -1121,7 +1144,20 @@ function handleFileSelect(files, zone, parseCallback) {
         fnEl.className = 'file-name';
         zone.appendChild(fnEl);
     }
-    fnEl.textContent = file.name;
+    fnEl.textContent = files.length > 1 ? `${files.length} archivos seleccionados` : file.name;
+
+    let hintEl = zone.querySelector('.change-hint');
+    if (!hintEl) {
+        hintEl = document.createElement('p');
+        hintEl.className = 'change-hint';
+        hintEl.style.fontSize = '10px';
+        hintEl.style.color = 'var(--text-muted)';
+        hintEl.style.opacity = '0.7';
+        hintEl.style.marginTop = '4px';
+        hintEl.textContent = '(Haz clic o arrastra para reemplazar)';
+        zone.appendChild(hintEl);
+    }
+
     const descEl = zone.querySelector('.desc');
     if (descEl) descEl.style.display = 'none';
 
@@ -2098,6 +2134,7 @@ function processCreditsFile(fileBuffer, fileName, isMultiBatch = false, isLastFi
 setupUploadZone('zone-courses', 'input-courses', async (files) => {
     if (!files || files.length === 0) return;
     const filesArray = Array.from(files);
+    rawCreditsWorkers = []; // Limpiar lista previa para reemplazo limpio al subir nuevo archivo
     for (let i = 0; i < filesArray.length; i++) {
         const file = filesArray[i];
         const isLast = (i === filesArray.length - 1);
@@ -2177,38 +2214,38 @@ setupUploadZone('zone-template', 'input-template', (files) => {
 });
 
 // 5. Multiple worker KARDEX history files
-const zoneHistory = document.getElementById('zone-worker-history');
-const inputHistory = document.getElementById('input-worker-history');
-const statusTextHistory = document.getElementById('status-text-history');
-const statusDotHistory = document.getElementById('status-dot-history');
-
-zoneHistory.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    zoneHistory.classList.add('dragover');
-});
-zoneHistory.addEventListener('dragleave', () => {
-    zoneHistory.classList.remove('dragover');
-});
-zoneHistory.addEventListener('drop', (e) => {
-    e.preventDefault();
-    zoneHistory.classList.remove('dragover');
-    if (e.dataTransfer.files.length > 0) {
-        inputHistory.files = e.dataTransfer.files;
-        parseHistoryFiles(inputHistory.files);
-    }
-});
-inputHistory.addEventListener('change', () => {
-    if (inputHistory.files.length > 0) {
-        parseHistoryFiles(inputHistory.files);
-    }
+setupUploadZone('zone-worker-history', 'input-worker-history', (files) => {
+    parseHistoryFiles(files);
 });
 
 async function parseHistoryFiles(files) {
+    if (!files || files.length === 0) return;
     let processed = 0;
-    let total = files.length;
+    const filesArray = Array.from(files);
+    const total = filesArray.length;
     zoneHistory.classList.add('success');
 
-    const filesArray = Array.from(files);
+    const onFileProcessed = () => {
+        processed++;
+        if (processed === total) {
+            const count = Object.keys(AppState.historyFiles).length;
+            statusTextHistory.textContent = `${count} trabajadores con CCHL/Kardex cargados`;
+            statusDotHistory.classList.add('active');
+            setUploadZoneLoaded('zone-worker-history', `${total} archivo(s) de Kardex procesado(s)`);
+            showNotification(`Se cargaron y procesaron ${total} archivo(s) de CCHL/Kardex.`);
+
+            AppState.workers.sort((a, b) => String(a.name).localeCompare(String(b.name), 'es', { sensitivity: 'base' }));
+            renderWorkerList();
+            checkInitState();
+
+            // Re-render courses if worker is currently selected
+            if (AppState.selectedWorker) {
+                const reloaded = AppState.workers.find(w => w.name.toUpperCase() === AppState.selectedWorker.name.toUpperCase());
+                if (reloaded) selectWorker(reloaded, false);
+            }
+        }
+    };
+
     for (const file of filesArray) {
         const reader = new FileReader();
         reader.onload = async (e) => {
@@ -2271,7 +2308,7 @@ async function parseHistoryFiles(files) {
                     }
                 }
 
-                const fallbackFileName = file.name.replace(/\.[^/.]+$/, "").trim().toUpperCase();
+                const fallbackFileName = file.name.replace(/\.[^\/.]+$/, "").trim().toUpperCase();
                 const parsed = extractKardexData(rawRows, fallbackFileName);
                 const workerName = parsed.workerName || fallbackFileName;
 
@@ -2316,27 +2353,16 @@ async function parseHistoryFiles(files) {
 
                 AppState.historyFiles[workerName] = rawRows;
                 await saveKardexFile(workerName, file.name, rawRows);
-                processed++;
-
-                if (processed === total) {
-                    statusTextHistory.textContent = `${Object.keys(AppState.historyFiles).length} trabajadores con CCHL/Kardex cargados`;
-                    statusDotHistory.classList.add('active');
-                    showNotification(`Se cargaron y procesaron ${total} archivos de CCHL/Kardex.`);
-
-                    AppState.workers.sort((a, b) => String(a.name).localeCompare(String(b.name), 'es', { sensitivity: 'base' }));
-                    renderWorkerList();
-                    checkInitState();
-
-                    // Re-render courses if worker is currently selected
-                    if (AppState.selectedWorker) {
-                        const reloaded = AppState.workers.find(w => w.name.toUpperCase() === AppState.selectedWorker.name.toUpperCase());
-                        if (reloaded) selectWorker(reloaded, false);
-                    }
-                }
             } catch (err) {
                 console.error(`Error al procesar archivo de Kardex ${file.name}:`, err);
                 showNotification(`Error al procesar Kardex de ${file.name}: ${err.message}`, true);
+            } finally {
+                onFileProcessed();
             }
+        };
+        reader.onerror = () => {
+            console.error(`Error al leer archivo de Kardex ${file.name}`);
+            onFileProcessed();
         };
         reader.readAsArrayBuffer(file);
     }
@@ -2390,9 +2416,12 @@ function formatDateSpanish(date) {
 
 // Subtract days to compute Start Date, skipping Saturdays and Sundays
 function calculateStartDate(endDate, durationHours) {
-    let daysNeeded = Math.ceil(durationHours / 8);
-    if (daysNeeded <= 0) daysNeeded = 1;
+    if (!endDate) return null;
     let currentDate = new Date(endDate);
+    if (isNaN(currentDate.getTime())) return null;
+
+    let daysNeeded = Math.ceil((durationHours || 8) / 8);
+    if (daysNeeded <= 0) daysNeeded = 1;
     let weekdaysCount = 0;
 
     while (weekdaysCount < daysNeeded) {
@@ -2977,7 +3006,6 @@ function toggleAllVisibleCourses(selectState) {
         }
     });
     updateSelectedCount();
-    });
 }
 
 // Selection checkbox triggers
@@ -3367,9 +3395,9 @@ function buildCourseContext(course) {
     }
 
     // Start Date split
-    const sy = String(course.startDate.getFullYear());
-    const sm = String(course.startDate.getMonth() + 1).padStart(2, '0');
-    const sd = String(course.startDate.getDate()).padStart(2, '0');
+    const sy = course.startDate ? String(course.startDate.getFullYear()) : '';
+    const sm = course.startDate ? String(course.startDate.getMonth() + 1).padStart(2, '0') : '';
+    const sd = course.startDate ? String(course.startDate.getDate()).padStart(2, '0') : '';
     courseCtx['AÑO1'] = sy[0] || '';
     courseCtx['AÑO2'] = sy[1] || '';
     courseCtx['AÑO3'] = sy[2] || '';
@@ -3384,9 +3412,9 @@ function buildCourseContext(course) {
     courseCtx['sd0'] = sd[0] || ''; courseCtx['sd1'] = sd[1] || '';
 
     // End Date split
-    const ey = String(course.endDate.getFullYear());
-    const em = String(course.endDate.getMonth() + 1).padStart(2, '0');
-    const ed = String(course.endDate.getDate()).padStart(2, '0');
+    const ey = course.endDate ? String(course.endDate.getFullYear()) : '';
+    const em = course.endDate ? String(course.endDate.getMonth() + 1).padStart(2, '0') : '';
+    const ed = course.endDate ? String(course.endDate.getDate()).padStart(2, '0') : '';
     courseCtx['AÑO5'] = ey[0] || '';
     courseCtx['AÑO6'] = ey[1] || '';
     courseCtx['AÑO7'] = ey[2] || '';
@@ -3536,7 +3564,7 @@ async function generateSeparateZipDocuments() {
                 mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             });
 
-            const cleanCourseName = course.name.replace(/[/\\?%*:|"<>]/g, '-');
+            const cleanCourseName = course.name.replace(/[\/\\?%*:|"<>]/g, '-');
             zip.file(`DC-3 - ${wName.toUpperCase()} - ${cleanCourseName.toUpperCase()}.docx`, out);
         }
 
