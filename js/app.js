@@ -1004,16 +1004,26 @@ function syncWorkersFromHistory() {
             if (parsed.curp && !worker.curp) { worker.curp = parsed.curp; addedOrUpdated = true; }
         }
 
-        parsed.courses.forEach(kc => {
-            const isDup = worker.requiredCourses.some(rc => cleanCourseName(rc.name) === cleanCourseName(kc.name));
-            if (!isDup) {
-                worker.requiredCourses.push(kc);
-                addedOrUpdated = true;
-            } else if (kc.endDate) {
-                const ex = worker.requiredCourses.find(rc => cleanCourseName(rc.name) === cleanCourseName(kc.name));
-                if (ex && !ex.endDate) { ex.endDate = kc.endDate; addedOrUpdated = true; }
-            }
-        });
+        if (worker.requiredCourses && worker.requiredCourses.length > 0) {
+            // Si el trabajador ya tiene cursos de Batería/Créditos, solo enriquecer fechas sin inflar la lista
+            parsed.courses.forEach(kc => {
+                if (kc.endDate) {
+                    const ex = worker.requiredCourses.find(rc => cleanCourseName(rc.name) === cleanCourseName(kc.name));
+                    if (ex && !ex.endDate) { ex.endDate = kc.endDate; addedOrUpdated = true; }
+                }
+            });
+        } else {
+            parsed.courses.forEach(kc => {
+                const isDup = worker.requiredCourses.some(rc => cleanCourseName(rc.name) === cleanCourseName(kc.name));
+                if (!isDup) {
+                    worker.requiredCourses.push(kc);
+                    addedOrUpdated = true;
+                } else if (kc.endDate) {
+                    const ex = worker.requiredCourses.find(rc => cleanCourseName(rc.name) === cleanCourseName(kc.name));
+                    if (ex && !ex.endDate) { ex.endDate = kc.endDate; addedOrUpdated = true; }
+                }
+            });
+        }
     });
 
     if (addedOrUpdated) {
@@ -1954,7 +1964,7 @@ function processCreditsFile(fileBuffer, fileName, isMultiBatch = false, isLastFi
         const workbook = XLSX.read(data, { type: 'array' });
 
         let workersMap = {};
-        if (rawCreditsWorkers && rawCreditsWorkers.length > 0) {
+        if (isMultiBatch && rawCreditsWorkers && rawCreditsWorkers.length > 0) {
             rawCreditsWorkers.forEach(w => {
                 workersMap[w.name.toUpperCase()] = w;
             });
@@ -2085,9 +2095,8 @@ function processCreditsFile(fileBuffer, fileName, isMultiBatch = false, isLastFi
 
                 if (courseName) {
                     const isDup = workersMap[name].requiredCourses.some(rc =>
-                        rc.name.toUpperCase() === courseName.toUpperCase() &&
-                        rc.puestoType === type &&
-                        (rc.bateria || '').toUpperCase() === puestoVal.toUpperCase()
+                        cleanCourseName(rc.name) === cleanCourseName(courseName) &&
+                        rc.puestoType === type
                     );
                     if (!isDup) {
                         workersMap[name].requiredCourses.push({
@@ -2334,18 +2343,31 @@ async function parseHistoryFiles(files) {
                     if (parsed.curp && !worker.curp) worker.curp = parsed.curp;
                 }
 
-                // 4. Agregar cursos extraídos del archivo CCHL/Kardex al trabajador
-                parsed.courses.forEach(kc => {
-                    const isDup = worker.requiredCourses.some(rc => cleanCourseName(rc.name) === cleanCourseName(kc.name));
-                    if (!isDup) {
-                        worker.requiredCourses.push(kc);
-                    } else if (kc.endDate) {
-                        const existingCourse = worker.requiredCourses.find(rc => cleanCourseName(rc.name) === cleanCourseName(kc.name));
-                        if (existingCourse && !existingCourse.endDate) {
-                            existingCourse.endDate = kc.endDate;
+                // 4. Cruzar cursos con el archivo CCHL/Kardex
+                if (worker.requiredCourses && worker.requiredCourses.length > 0) {
+                    // Si el trabajador ya tiene cursos de Batería/Créditos, ÚNICAMENTE actualizamos fechas de acreditación sin inflar la lista
+                    parsed.courses.forEach(kc => {
+                        if (kc.endDate) {
+                            const existingCourse = worker.requiredCourses.find(rc => cleanCourseName(rc.name) === cleanCourseName(kc.name));
+                            if (existingCourse && !existingCourse.endDate) {
+                                existingCourse.endDate = kc.endDate;
+                            }
                         }
-                    }
-                });
+                    });
+                } else {
+                    // Fallback: Si el trabajador no tenía cursos definidos previamente por Créditos, usamos los del Kardex
+                    parsed.courses.forEach(kc => {
+                        const isDup = worker.requiredCourses.some(rc => cleanCourseName(rc.name) === cleanCourseName(kc.name));
+                        if (!isDup) {
+                            worker.requiredCourses.push(kc);
+                        } else if (kc.endDate) {
+                            const existingCourse = worker.requiredCourses.find(rc => cleanCourseName(rc.name) === cleanCourseName(kc.name));
+                            if (existingCourse && !existingCourse.endDate) {
+                                existingCourse.endDate = kc.endDate;
+                            }
+                        }
+                    });
+                }
 
                 if (!rawCreditsWorkers.some(rw => rw.name.toUpperCase() === worker.name.toUpperCase())) {
                     rawCreditsWorkers.push(worker);
