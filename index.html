@@ -34,25 +34,19 @@
         <!-- App Header (Centered & Unboxed) -->
         <header class="app-header">
             <div class="app-header-actions">
-                <a href="https://SistemaCO.onrender.com" target="_blank" rel="noopener noreferrer" class="btn"
-                    style="background: linear-gradient(135deg, #00b050, #059669); color: #ffffff; border: none; font-weight: 800; font-size: 11.5px; padding: 8px 16px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0, 176, 80, 0.35); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease-in-out; text-transform: uppercase; letter-spacing: 0.5px;"
-                    onmouseover="this.style.transform='scale(1.04)'; this.style.boxShadow='0 6px 20px rgba(0, 176, 80, 0.5)';"
-                    onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 15px rgba(0, 176, 80, 0.35)';">
-                    <svg viewBox="0 0 24 24" style="width:14px; height:14px; fill:currentColor;">
+                <a href="https://SistemaCO.onrender.com" target="_blank" rel="noopener noreferrer" class="header-link-btn">
+                    <svg viewBox="0 0 24 24" style="width:13px; height:13px; fill:currentColor;">
                         <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
                     </svg>
                     ¿NECESITAS ARCHIVOS CO-03?
                 </a>
-                <button class="btn btn-secondary" onclick="document.getElementById('help-modal').style.display='flex'"
-                    style="border-radius: 50%; width: 34px; height: 34px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; background: rgba(0, 176, 80, 0.15); border-color: rgba(0, 176, 80, 0.3); color: #00b050; cursor: pointer;"
+                <button class="help-circle-btn" onclick="document.getElementById('help-modal').style.display='flex'"
                     title="Manual de Usuario">?</button>
             </div>
 
-            <div
-                style="display:inline-flex; align-items:center; gap:8px; background: rgba(0, 176, 80, 0.12); border: 1px solid rgba(0, 176, 80, 0.3); padding: 4px 12px; border-radius: 20px; margin-bottom: 2px;">
-                <span class="status-dot active" style="background:#00b050; box-shadow: 0 0 6px #00b050;"></span>
-                <span
-                    style="font-size:10px; font-weight:700; color:#34d399; letter-spacing:1px; text-transform:uppercase;">CFE — CAPACITACIÓN</span>
+            <div class="header-badge">
+                <span class="status-dot active"></span>
+                <span class="badge-text">CFE — CAPACITACIÓN</span>
             </div>
 
             <h1>Generador de Constancias CCHL</h1>
@@ -108,16 +102,16 @@
                         <li><strong>3. Hoja o Excel de Firmas (Opcional) (.xlsx):</strong> Puedes incluir una hoja <code>FIRMAS</code> dentro de <code>CREDITOS.xlsx</code> o subir un archivo Excel exclusivo para firmas de representantes, instructores y trabajadores.</li>
                     </ul>
                     <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                        <button class="btn" onclick="downloadExampleExcelTemplate()"
-                            style="padding: 7px 14px; font-size: 12px; font-weight: 700; background: rgba(0, 176, 80, 0.2); border: 1px solid rgba(0, 176, 80, 0.4); color: #34d399; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"
+                        <button class="btn btn-secondary" onclick="downloadExampleExcelTemplate()"
+                            style="padding: 7px 14px; font-size: 12px; font-weight: 600; color: #34d399; border-color: rgba(16, 133, 72, 0.35); background: rgba(16, 133, 72, 0.08); display: inline-flex; align-items: center; gap: 6px;"
                             title="Descarga una plantilla de Excel con datos de ejemplo lista para subir">
-                            <svg viewBox="0 0 24 24" style="width:16px; height:16px; fill:currentColor;">
+                            <svg viewBox="0 0 24 24" style="width:15px; height:15px; fill:currentColor;">
                                 <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
                             </svg>
                             Descargar Plantilla de Ejemplo (.xlsx)
                         </button>
                         <button class="btn btn-secondary" onclick="resetDatabaseAction()"
-                            style="padding: 6px 12px; font-size: 11px; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: #fca5a5;">
+                            style="padding: 6px 12px; font-size: 11px; background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.2); color: #f87171;">
                             Resetear Base de Datos (Limpiar Memoria)
                         </button>
                     </div>
@@ -264,27 +258,27 @@
                         <div
                             style="grid-column: span 2; display:flex; justify-content:space-between; align-items:center;">
                             <h3 id="act-worker-name"
-                                style="font-size:18px; font-weight:700; color:#fff; font-family:var(--font-outfit);">
+                                style="font-size:16px; font-weight:700; color:#fff; font-family:var(--font-outfit);">
                                 SELECCIONA UN TRABAJADOR</h3>
                             <span class="badge" id="act-worker-rpe-badge"
-                                style="background:var(--primary-glow); color:var(--primary); font-family:monospace; font-size:12px;">RPE:
+                                style="background:#151d2a; color:#38bdf8; border: 1px solid #243247; font-family:'Fira Code', monospace; font-size:11px; padding: 2px 8px; border-radius: 4px;">RPE:
                                 --</span>
                         </div>
                         <div>
                             <span
-                                style="color:var(--text-muted); font-weight:600; display:block; margin-bottom:2px; font-size:11px; text-transform:uppercase;">CURP:</span>
+                                style="color:var(--text-muted); font-weight:600; display:block; margin-bottom:2px; font-size:10.5px; text-transform:uppercase;">CURP:</span>
                             <span id="act-worker-curp"
-                                style="font-family:monospace; font-size:14.5px; font-weight:700; letter-spacing:0.5px;">--</span>
+                                style="font-family:'Fira Code', monospace; font-size:13.5px; font-weight:600; letter-spacing:0.5px; color:#f1f5f9;">--</span>
                             <div id="act-worker-curp-error"
                                 style="color: var(--danger); font-size: 10px; font-weight: 600; margin-top: 2px; display: none;">
                                 CURP Inválido (debe tener 18 caracteres)</div>
                         </div>
                         <div>
                             <span
-                                style="color:var(--text-muted); font-weight:600; display:block; margin-bottom:2px; font-size:11px; text-transform:uppercase;">Número
+                                style="color:var(--text-muted); font-weight:600; display:block; margin-bottom:2px; font-size:10.5px; text-transform:uppercase;">Número
                                 de Puesto:</span>
                             <input type="text" id="act-worker-puesto-num" class="input-control"
-                                style="padding:5px 10px; font-size:13px; font-weight:700; color:var(--accent);"
+                                style="padding:5px 10px; font-size:12.5px; font-weight:600; color:#f1f5f9;"
                                 placeholder="Ej. 464020200">
                             <div id="act-worker-puesto-error"
                                 style="color: var(--danger); font-size: 10px; font-weight: 600; margin-top: 2px; display: none;">
@@ -322,9 +316,9 @@
                     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:space-between;">
                         <div style="display:flex; gap:6px; align-items:center;">
                             <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Filtrar:</span>
-                            <button type="button" class="btn btn-secondary filter-pill active" id="btn-filter-all" onclick="setCourseFilterType('all')" style="padding:4px 10px; font-size:11px; border-radius:14px;">Todos (<span id="count-filter-all">0</span>)</button>
-                            <button type="button" class="btn btn-secondary filter-pill" id="btn-filter-cappa" onclick="setCourseFilterType('CAPPA')" style="padding:4px 10px; font-size:11px; border-radius:14px; border-color: rgba(5, 150, 105, 0.4); color:#34d399;">CAPPA (<span id="count-filter-cappa">0</span>)</button>
-                            <button type="button" class="btn btn-secondary filter-pill" id="btn-filter-cappi" onclick="setCourseFilterType('CAPPI')" style="padding:4px 10px; font-size:11px; border-radius:14px; border-color: rgba(2, 132, 199, 0.4); color:#38bdf8;">CAPPI (<span id="count-filter-cappi">0</span>)</button>
+                            <button type="button" class="btn btn-secondary filter-pill active" id="btn-filter-all" onclick="setCourseFilterType('all')" style="padding:4px 10px; font-size:11px; border-radius:6px;">Todos (<span id="count-filter-all">0</span>)</button>
+                            <button type="button" class="btn btn-secondary filter-pill" id="btn-filter-cappa" onclick="setCourseFilterType('CAPPA')" style="padding:4px 10px; font-size:11px; border-radius:6px; border-color: rgba(16, 133, 72, 0.3); color:#34d399;">CAPPA (<span id="count-filter-cappa">0</span>)</button>
+                            <button type="button" class="btn btn-secondary filter-pill" id="btn-filter-cappi" onclick="setCourseFilterType('CAPPI')" style="padding:4px 10px; font-size:11px; border-radius:6px; border-color: rgba(59, 130, 246, 0.3); color:#60a5fa;">CAPPI (<span id="count-filter-cappi">0</span>)</button>
                         </div>
                         <div style="display:flex; gap:6px; align-items:center;">
                             <button type="button" class="btn btn-secondary" onclick="toggleAllVisibleCourses(true)" style="padding:5px 10px; font-size:11px;">Marcar Todos</button>
@@ -332,7 +326,7 @@
                         </div>
                     </div>
                     <div style="display:flex; gap:8px; align-items:stretch;">
-                        <div style="display:flex; gap:8px; align-items:center; background: rgba(15, 23, 42, 0.3); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--glass-border); flex: 1;">
+                        <div style="display:flex; gap:8px; align-items:center; background: #0d121c; padding: 6px 12px; border-radius: 7px; border: 1px solid #1f2a3c; flex: 1;">
                             <svg viewBox="0 0 24 24" style="width: 13px; height: 13px; fill: var(--text-muted); flex-shrink:0;">
                                 <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
                             </svg>
@@ -703,12 +697,12 @@
                 </div>
 
                 <div
-                    style="background: rgba(0, 176, 80, 0.1); border: 1px solid rgba(0, 176, 80, 0.2); padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+                    style="background: #0d121c; border: 1px solid #1c2436; padding: 12px 14px; border-radius: 8px; margin-bottom: 20px;">
                     <label for="config-profile-select"
-                        style="font-size:12px; font-weight:bold; color:var(--primary); margin-bottom: 5px; display:block;">Perfil
+                        style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom: 6px; display:block;">Perfil
                         Activo para Generación:</label>
                     <select id="config-profile-select" class="input-control" onchange="selectActiveProfile(this.value)"
-                        style="border-color: var(--primary); font-size: 14px; font-weight: 600;">
+                        style="font-size: 13.5px; font-weight: 600;">
                         <!-- Opciones cargadas dinámicamente -->
                     </select>
                 </div>
@@ -884,14 +878,15 @@
 
     <!-- Help Modal -->
     <div id="help-modal"
-        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 8, 14, 0.75); backdrop-filter: blur(4px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
         <div class="card"
-            style="width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; background: var(--bg-gradient); border: 1px solid var(--primary); box-shadow: 0 10px 30px rgba(0,0,0,0.8); position: relative;">
+            style="width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; background: var(--card-bg); border: 1px solid var(--card-border); box-shadow: 0 16px 40px rgba(0,0,0,0.6); position: relative;">
             <button onclick="document.getElementById('help-modal').style.display='none'"
-                style="position: absolute; right: 15px; top: 15px; background: none; border: none; color: #fff; font-size: 20px; cursor: pointer;">&times;</button>
+                style="position: absolute; right: 15px; top: 15px; background: none; border: none; color: #8c9bb0; font-size: 20px; cursor: pointer; transition: color 0.15s ease;"
+                onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#8c9bb0'">&times;</button>
             <div class="card-title"
-                style="border-bottom: 1px solid rgba(0, 176, 80, 0.3); margin-bottom: 15px; color: #00b050;">
-                <svg viewBox="0 0 24 24" style="fill: #00b050;">
+                style="border-bottom: 1px solid var(--card-border-subtle); margin-bottom: 15px; color: #ffffff;">
+                <svg viewBox="0 0 24 24" style="fill: var(--primary);">
                     <path
                         d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" />
                 </svg>
