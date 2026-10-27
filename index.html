@@ -34,6 +34,13 @@
         <!-- App Header (Centered & Unboxed) -->
         <header class="app-header">
             <div class="app-header-actions">
+                <button class="header-link-btn express-btn-header" onclick="openQuickDC3Modal()"
+                    title="Generador Express DC-3: Genera una constancia DC-3 al instante sin necesidad de subir archivos Excel">
+                    <svg viewBox="0 0 24 24" style="width:14px; height:14px; fill:currentColor;">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+                    </svg>
+                    GENERADOR EXPRESS DC-3
+                </button>
                 <a href="https://SistemaCO.onrender.com" target="_blank" rel="noopener noreferrer" class="header-link-btn">
                     <svg viewBox="0 0 24 24" style="width:13px; height:13px; fill:currentColor;">
                         <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
@@ -140,6 +147,12 @@
                             <p class="desc">Arrastra la plantilla CCHL MODIFICABLE.docx</p>
                             <input type="file" id="input-template" class="file-input" accept=".docx">
                         </div>
+                        <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+                            <span id="default-template-badge" class="badge badge-success" style="font-size:10px; padding:3px 8px; display:inline-flex; align-items:center; gap:4px;">
+                                <svg viewBox="0 0 24 24" style="width:11px; height:11px; fill:currentColor;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                Plantilla Oficial CFE Integrada (Lista para usar)
+                            </span>
+                        </div>
                         <div id="detected-tags-label"
                             style="display:none; margin-top:10px; font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">
                             Variables Detectadas en Plantilla:</div>
@@ -204,6 +217,14 @@
                 </div>
 
                 <div class="filter-controls">
+                    <button class="btn btn-primary" onclick="openNewWorkerModal()"
+                        style="width:100%; padding: 8px 12px; font-size: 12px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 8px rgba(16, 133, 72, 0.3);"
+                        title="Crear un trabajador nuevo manualmente sin necesidad de Excel">
+                        <svg viewBox="0 0 24 24" style="width:15px; height:15px; fill:currentColor;">
+                            <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </svg>
+                        + Nuevo Trabajador
+                    </button>
                     <input type="text" id="search-worker-list" class="input-control"
                         placeholder="Buscar por nombre o RPE...">
                     <div style="display:flex; flex-direction:column; gap:6px; margin-top:6px;">
@@ -256,13 +277,26 @@
                     style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--glass-border); padding: 12px 16px; border-radius: 10px;">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; font-size: 13px;">
                         <div
-                            style="grid-column: span 2; display:flex; justify-content:space-between; align-items:center;">
-                            <h3 id="act-worker-name"
-                                style="font-size:16px; font-weight:700; color:#fff; font-family:var(--font-outfit);">
-                                SELECCIONA UN TRABAJADOR</h3>
-                            <span class="badge" id="act-worker-rpe-badge"
-                                style="background:#151d2a; color:#38bdf8; border: 1px solid #243247; font-family:'Fira Code', monospace; font-size:11px; padding: 2px 8px; border-radius: 4px;">RPE:
-                                --</span>
+                            style="grid-column: span 2; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <h3 id="act-worker-name"
+                                    style="font-size:16px; font-weight:700; color:#fff; font-family:var(--font-outfit);">
+                                    SELECCIONA UN TRABAJADOR</h3>
+                                <span class="badge" id="act-worker-rpe-badge"
+                                    style="background:#151d2a; color:#38bdf8; border: 1px solid #243247; font-family:'Fira Code', monospace; font-size:11px; padding: 2px 8px; border-radius: 4px;">RPE:
+                                    --</span>
+                                <span class="badge-manual-worker" id="act-worker-manual-badge" style="display:none;">Manual</span>
+                            </div>
+                            <div style="display:flex; gap:6px;">
+                                <button type="button" class="btn btn-secondary" id="btn-edit-active-worker" onclick="openEditActiveWorkerModal()"
+                                    style="display:none; padding: 4px 8px; font-size:11px;" title="Editar datos personales de este trabajador">
+                                    Editar
+                                </button>
+                                <button type="button" class="btn btn-secondary" id="btn-delete-active-worker" onclick="deleteActiveWorker()"
+                                    style="display:none; padding: 4px 8px; font-size:11px; background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.25); color: #f87171;" title="Eliminar trabajador">
+                                    Eliminar
+                                </button>
+                            </div>
                         </div>
                         <div>
                             <span
@@ -300,7 +334,21 @@
                         </div>
                         <div
                             style="grid-column: span 2; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px; margin-top:5px; display:flex; flex-direction:column; gap:8px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                                <span style="font-size:10.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Firmantes / Jefes para este documento:</span>
+                                <button type="button" class="btn btn-secondary" onclick="resetActiveWorkerJefesDefaults()" style="padding:2px 8px; font-size:10px;" title="Restablecer a jefes actuales predeterminados">Restablecer Predeterminados</button>
+                            </div>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                                <div>
+                                    <label for="act-worker-patron-rep" style="font-size:9.5px; color:var(--text-muted); display:block; margin-bottom:2px;">Representante del Patrón</label>
+                                    <input type="text" id="act-worker-patron-rep" class="input-control" value="JOSE DAVID LOPEZ MEDINA" onchange="saveActiveWorkerJefes()" style="padding:4px 8px; font-size:11.5px;">
+                                </div>
+                                <div>
+                                    <label for="act-worker-worker-rep" style="font-size:9.5px; color:var(--text-muted); display:block; margin-bottom:2px;">Representante de los Trabajadores</label>
+                                    <input type="text" id="act-worker-worker-rep" class="input-control" value="JUAN CARLOS SERNA GOMEZ" onchange="saveActiveWorkerJefes()" style="padding:4px 8px; font-size:11.5px;">
+                                </div>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
                                 <label class="checkbox-container" style="font-weight:600; font-size:13px;">
                                     <input type="checkbox" id="act-worker-completed-checkbox"
                                         onchange="toggleWorkerCompletedStatus()">
@@ -335,6 +383,9 @@
                         <button type="button" class="btn btn-secondary" onclick="generateRandomDatesForEmptyCourses()" style="padding: 0 12px; font-size: 11px; flex-shrink:0; text-transform:none;" title="Asigna fechas en días hábiles solo a los cursos que no tienen fecha">
                             Fechas a Cursos Vacíos
                         </button>
+                        <button type="button" class="btn btn-secondary" onclick="shuffleInstructorsForActiveWorker()" style="padding: 0 12px; font-size: 11px; flex-shrink:0; text-transform:none;" title="Asigna instructores aleatorios variados a todos los cursos de este trabajador">
+                            Variar Instructores
+                        </button>
                         <button class="btn btn-secondary" onclick="toggleManualCourseForm(true)" id="btn-add-manual-course" style="padding: 0 12px; font-size: 11px; flex-shrink:0; text-transform:none;" disabled>
                             + Curso Manual
                         </button>
@@ -354,9 +405,9 @@
                     <div style="display: grid; grid-template-columns: 2fr 0.8fr 1.2fr; gap: 8px;">
                         <div class="form-group">
                             <label for="manual-c-name" style="font-size: 9px;">Nombre del Curso</label>
-                            <input type="text" id="manual-c-name" class="input-control"
+                            <input type="text" id="manual-c-name" class="input-control" list="common-courses-datalist"
                                 style="padding: 6px 10px; font-size:12px;"
-                                placeholder="Ej. SEGURIDAD EN TRABAJOS CON TIERRA">
+                                placeholder="Escribe o selecciona de la lista...">
                         </div>
                         <div class="form-group">
                             <label for="manual-c-hours" style="font-size: 9px;">Horas</label>
@@ -398,13 +449,14 @@
                     <table id="table-courses-dashboard">
                         <thead>
                             <tr>
-                                <th style="width: 50px; text-align:center;">Imprimir</th>
-                                <th>Curso Requerido (CREDITOS)</th>
-                                <th style="width: 85px;">Puesto</th>
-                                <th style="width: 65px; text-align:center;">Horas</th>
-                                <th style="width: 155px;">Instructor</th>
-                                <th style="width: 125px;">F. Término (Kardex)</th>
-                                <th style="width: 110px;">F. Inicio (Hábiles)</th>
+                                <th style="width: 45px; text-align:center;">Imprimir</th>
+                                <th>Curso Requerido</th>
+                                <th style="width: 75px;">Puesto</th>
+                                <th style="width: 75px; text-align:center;" title="Horas editables directamente">Horas</th>
+                                <th style="width: 145px;">Instructor</th>
+                                <th style="width: 120px;">F. Término</th>
+                                <th style="width: 110px;">F. Inicio</th>
+                                <th style="width: 115px; text-align:center;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="table-courses-dashboard-body">
@@ -957,7 +1009,316 @@
         <span id="toast-msg">Mensaje de notificación</span>
     </div>
 
+    <!-- ==========================================
+         MODALES DEL GENERADOR EXPRESS Y CATÁLOGOS
+         ========================================== -->
+
+    <!-- Datalist de Cursos Frecuentes Oficiales de CFE y STPS -->
+    <datalist id="common-courses-datalist">
+        <option value="SEGURIDAD EN EL TRABAJO Y PREVENCIÓN DE RIESGOS">
+        <option value="PRIMEROS AUXILIOS">
+        <option value="MANEJO A LA DEFENSIVA">
+        <option value="COMISIONES DE SEGURIDAD E HIGIENE">
+        <option value="REGLAMENTO DE SEGURIDAD E HIGIENE CAPITULO 100 DISTRIBUCIÓN">
+        <option value="PROCEDIMIENTOS DE SEGURIDAD DEL SISTEMA INTEGRAL DE GESTIÓN">
+        <option value="ELECTRICIDAD APLICADA A LA MEDICION II">
+        <option value="PROCEDIMIENTO PARA LA ATENCIÓN DE SOLICITUDES DE SERVICIO DE ENERGÍA ELECTRICA Y NORMATIVIDAD APLICABLE II">
+        <option value="TRABAJOS EN ALTURAS Y USO DE EQUIPO DE PROTECCIÓN PERSONAL">
+        <option value="CANDADEO Y ETIQUETADO (LOTO) - CORTE Y RECONEXIÓN SEGURA">
+        <option value="MANTENIMIENTO A LÍNEAS Y REDES ENERGIZADAS DE MEDIA TENSIÓN">
+        <option value="OPERACIÓN Y MANTENIMIENTO DE SUBESTACIONES ELÉCTRICAS">
+        <option value="SUBESTACIONES ELÉCTRICAS DE DISTRIBUCIÓN">
+        <option value="EQUIPOS DE MEDICIÓN Y CALIDAD DE LA ENERGÍA">
+        <option value="LÍNEAS Y REDES SUBTERRÁNEAS: EMPALMES Y TERMINALES">
+        <option value="TRANSFORMADORES DE DISTRIBUCIÓN: INSTALACIÓN Y PRUEBAS">
+        <option value="COMBATE Y PREVENCIÓN DE INCENDIOS INDUSTRIALES">
+        <option value="TRABAJOS EN ESPACIOS CONFINADOS">
+        <option value="OPERACIÓN DE GRÚAS ARTICULADAS Y CANASTILLAS">
+        <option value="NORMAS OFICIALES MEXICANAS STPS (NOM-009, NOM-029, NOM-017)">
+    </datalist>
+    <datalist id="instructors-list">
+        <!-- Llenado dinámicamente con los 38 instructores oficiales y personalizados -->
+    </datalist>
+
+    <!-- Modal 1: Generador Express DC-3 -->
+    <div id="quick-dc3-modal" class="swiss-modal-backdrop">
+        <div class="swiss-modal-card">
+            <button class="swiss-modal-close" onclick="closeQuickDC3Modal()">&times;</button>
+            <div class="card-title" style="border-bottom:1px solid var(--card-border-subtle); padding-bottom:8px; margin:0; color:#fff;">
+                <svg viewBox="0 0 24 24" style="fill:var(--primary); width:20px; height:20px;">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+                </svg>
+                Generador Express DC-3
+            </div>
+
+            <div class="info-block" style="font-size:12px; padding:10px 12px; margin:0;">
+                <strong>Generador Express:</strong> Llena los datos a continuación y descarga tu constancia DC-3 en Word (.docx) al instante, o guárdala en el sistema sin necesidad de subir archivos Excel de Créditos.
+            </div>
+
+            <!-- Sección 1: Trabajador -->
+            <div style="background:#0d121c; border:1px solid #1c2538; padding:12px; border-radius:8px; display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:11px; font-weight:700; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px;">1. Datos del Trabajador</span>
+                    <select id="quick-dc3-worker-picker" class="input-control" style="width:auto; padding:4px 8px; font-size:11px;" onchange="onQuickPickerWorkerChange(this.value)">
+                        <option value="new">+ Escribir Trabajador Nuevo</option>
+                        <!-- Opciones dinámicas -->
+                    </select>
+                </div>
+                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
+                    <div class="form-group">
+                        <label for="quick-w-name" style="font-size:10px;">Nombre Completo (Apellidos y Nombre)</label>
+                        <input type="text" id="quick-w-name" class="input-control" placeholder="Ej. PEREZ LOPEZ JUAN" style="padding:6px 10px; font-size:12.5px;">
+                    </div>
+                    <div class="form-group">
+                        <label for="quick-w-rpe" style="font-size:10px;">RPE</label>
+                        <input type="text" id="quick-w-rpe" class="input-control" placeholder="Ej. 9K83N" style="padding:6px 10px; font-size:12.5px;">
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1.2fr 1.8fr 1fr; gap:8px;">
+                    <div class="form-group">
+                        <label for="quick-w-curp" style="font-size:10px;">CURP (18 dígitos)</label>
+                        <input type="text" id="quick-w-curp" class="input-control" maxlength="18" placeholder="CURP de 18 caracteres" style="padding:6px 10px; font-size:12px; font-family:'Fira Code', monospace;">
+                    </div>
+                    <div class="form-group">
+                        <label for="quick-w-puesto" style="font-size:10px;">Puesto</label>
+                        <input type="text" id="quick-w-puesto" class="input-control" placeholder="Ej. SOBRESTANTE DE LINEAS" style="padding:6px 10px; font-size:12px;">
+                    </div>
+                    <div class="form-group">
+                        <label for="quick-w-puesto-num" style="font-size:10px;">Núm. Puesto</label>
+                        <input type="text" id="quick-w-puesto-num" class="input-control" placeholder="464020200" value="464020200" style="padding:6px 10px; font-size:12px;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección 2: Curso -->
+            <div style="background:#0d121c; border:1px solid #1c2538; padding:12px; border-radius:8px; display:flex; flex-direction:column; gap:10px;">
+                <span style="font-size:11px; font-weight:700; color:#34d399; text-transform:uppercase; letter-spacing:0.5px;">2. Datos del Curso y Capacitación</span>
+                <div style="display:grid; grid-template-columns: 2.2fr 0.8fr 1fr; gap:8px;">
+                    <div class="form-group">
+                        <label for="quick-c-name" style="font-size:10px;">Nombre del Curso</label>
+                        <input type="text" id="quick-c-name" class="input-control" list="common-courses-datalist" placeholder="Selecciona o escribe el curso..." style="padding:6px 10px; font-size:12.5px;">
+                    </div>
+                    <div class="form-group">
+                        <label for="quick-c-hours" style="font-size:10px;">Horas</label>
+                        <input type="number" id="quick-c-hours" class="input-control" value="40" min="1" max="999" style="padding:6px 10px; font-size:12.5px; font-weight:700; color:#38bdf8;" onchange="recalculateQuickDates()">
+                    </div>
+                    <div class="form-group">
+                        <label for="quick-c-type" style="font-size:10px;">Tipo</label>
+                        <select id="quick-c-type" class="input-control" style="padding:6px 10px; font-size:12px;">
+                            <option value="CAPPA">CAPPA (Puesto Act.)</option>
+                            <option value="CAPPI">CAPPI (Puesto Inm.)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1.2fr 1.2fr 1.6fr; gap:8px;">
+                    <div class="form-group">
+                        <label for="quick-c-end" style="font-size:10px;">F. Término</label>
+                        <div style="display:flex; gap:4px;">
+                            <input type="date" id="quick-c-end" class="input-control" style="padding:5px 6px; font-size:11.5px;" onchange="recalculateQuickDates()">
+                            <button type="button" class="btn btn-secondary" onclick="assignQuickRandomDate()" style="padding:4px 8px; font-size:11px;" title="Generar fecha aleatoria en días hábiles">Aleatorio</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="quick-c-start" style="font-size:10px;">F. Inicio (Hábiles)</label>
+                        <input type="date" id="quick-c-start" class="input-control" style="padding:5px 6px; font-size:11.5px; background:rgba(0,0,0,0.25);">
+                    </div>
+                    <div class="form-group">
+                        <label for="quick-c-instructor" style="font-size:10px;">Instructor (Escribe o Selecciona)</label>
+                        <div style="display:flex; gap:4px;">
+                            <input type="text" id="quick-c-instructor" list="instructors-list" class="input-control" placeholder="Instructor..." value="Aleatorio" style="padding:5px 8px; font-size:11.5px;">
+                            <button type="button" class="btn btn-secondary" onclick="varyQuickInstructor()" style="padding:4px 8px; font-size:11px;" title="Variar o rotar instructor del catálogo">Variar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección 3: Firmantes / Jefes -->
+            <div style="background:#0d121c; border:1px solid #1c2538; padding:12px; border-radius:8px; display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:11px; font-weight:700; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px;">3. Firmantes / Jefes (Predeterminados o Anteriores)</span>
+                    <button type="button" class="btn btn-secondary" onclick="resetQuickJefesDefaults()" style="padding:2px 8px; font-size:10px;" title="Restablecer a jefes actuales predeterminados">Restablecer Predeterminados</button>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                    <div class="form-group">
+                        <label for="quick-patron-rep" style="font-size:10px;">Representante del Patrón</label>
+                        <input type="text" id="quick-patron-rep" class="input-control" value="JOSE DAVID LOPEZ MEDINA" style="padding:6px 10px; font-size:12px;">
+                    </div>
+                    <div class="form-group">
+                        <label for="quick-worker-rep" style="font-size:10px;">Representante de los Trabajadores</label>
+                        <input type="text" id="quick-worker-rep" class="input-control" value="JUAN CARLOS SERNA GOMEZ" style="padding:6px 10px; font-size:12px;">
+                    </div>
+                </div>
+                <span style="font-size:10.5px; color:var(--text-muted);">Para constancias de años anteriores con otros jefes, puedes modificar los nombres libremente aquí.</span>
+            </div>
+
+            <!-- Opción: Leyenda de Regularización -->
+            <div style="background:#0d121c; border:1px solid #1c2538; padding:10px 12px; border-radius:8px;">
+                <label class="checkbox-container" style="font-size:11.5px; font-weight:600; color:#f1f5f9; display:flex; align-items:flex-start; line-height:1.4; padding-left:24px; cursor:pointer; margin:0;">
+                    <input type="checkbox" id="quick-include-legend" onchange="this.dataset.userTouched = 'true'" onclick="this.dataset.userTouched = 'true'">
+                    <span class="checkmark" style="top:1px;"></span>
+                    <span>
+                        <span>Incluir leyenda de regularización en la constancia</span>
+                        <span style="display:block; font-size:10px; font-weight:400; color:var(--text-muted); margin-top:3px; font-style:italic; line-height:1.35;">
+                            "Dando seguimiento a la supervisión nacional se identificó que hay CCHL en años anteriores al 2024 que no están impresas por lo que se estarán regularizando con el nombre de la autoridades actuales para contar con el expediente completo atentamente Lic. Ivonne Reza Rugerio jefa de oficina de capacitación en funciones"
+                        </span>
+                    </span>
+                </label>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:4px;">
+                <button class="btn btn-secondary" onclick="closeQuickDC3Modal()" style="padding:8px 16px; font-size:12px;">Cancelar</button>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <!-- Cargar Kardex Opcional -->
+                    <input type="file" id="quick-kardex-file-input" accept=".xlsx, .xls" style="display:none;" onchange="handleQuickKardexUpload(event)">
+                    <button type="button" class="btn btn-secondary" id="btn-quick-kardex-upload" onclick="document.getElementById('quick-kardex-file-input').click()" style="padding:8px 12px; font-size:12px; border-color:rgba(16, 185, 129, 0.4); color:#34d399;" title="Cargar archivo Excel de Kardex para este trabajador si lo requieres">
+                        Cargar Kardex (.xlsx)
+                    </button>
+                    <button class="btn btn-secondary" onclick="quickDC3SaveToSystem()" style="padding:8px 14px; font-size:12px; border-color:rgba(59, 130, 246, 0.4); color:#60a5fa;" title="Guarda este trabajador y curso en el generador para seguir editándolo">
+                        Guardar en el Sistema
+                    </button>
+                    <button class="btn btn-primary" onclick="quickDC3DownloadDirect()" style="padding:8px 18px; font-size:12px; font-weight:700; box-shadow: 0 4px 15px rgba(16, 133, 72, 0.4);">
+                        <svg viewBox="0 0 24 24" style="width:14px; height:14px; fill:currentColor; margin-right:4px;">
+                            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                        </svg>
+                        Descargar Word (.docx) Directo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Estado de Kardex cargado en modal -->
+            <div id="quick-kardex-status" style="display:none; font-size:11px; color:#34d399; background:rgba(16, 185, 129, 0.1); border:1px solid rgba(16, 185, 129, 0.25); border-radius:6px; padding:6px 10px; margin-top:2px;">
+                Kardex vinculado: <span id="quick-kardex-filename" style="font-weight:700;"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Crear Nuevo Trabajador -->
+    <div id="new-worker-modal" class="swiss-modal-backdrop">
+        <div class="swiss-modal-card" style="max-width:540px;">
+            <button class="swiss-modal-close" onclick="closeNewWorkerModal()">&times;</button>
+            <div class="card-title" style="border-bottom:1px solid var(--card-border-subtle); padding-bottom:8px; margin:0; color:#fff;">
+                <svg viewBox="0 0 24 24" style="fill:var(--primary); width:18px; height:18px;">
+                    <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+                + Crear Nuevo Trabajador (Modo Libre)
+            </div>
+            <div class="info-block" style="font-size:12px; padding:8px 12px; margin:0;">
+                Ingresa los datos del trabajador. Se agregará a la lista para generar constancias inmediatamente y quedará guardado en tu navegador.
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <div class="form-group">
+                    <label for="nw-name" style="font-size:10px;">Nombre Completo (Apellidos y Nombre)</label>
+                    <input type="text" id="nw-name" class="input-control" placeholder="Ej. PEREZ LOPEZ JUAN" style="padding:7px 10px; font-size:13px; text-transform:uppercase;">
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1.5fr; gap:10px;">
+                    <div class="form-group">
+                        <label for="nw-rpe" style="font-size:10px;">RPE</label>
+                        <input type="text" id="nw-rpe" class="input-control" placeholder="Ej. 9K83N" style="padding:7px 10px; font-size:13px; text-transform:uppercase; font-family:'Fira Code', monospace;">
+                    </div>
+                    <div class="form-group">
+                        <label for="nw-curp" style="font-size:10px;">CURP (18 caracteres)</label>
+                        <input type="text" id="nw-curp" class="input-control" maxlength="18" placeholder="CURP" style="padding:7px 10px; font-size:13px; text-transform:uppercase; font-family:'Fira Code', monospace;">
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div class="form-group">
+                        <label for="nw-cappa" style="font-size:10px;">Puesto Actual (CAPPA)</label>
+                        <input type="text" id="nw-cappa" class="input-control" placeholder="Ej. SOBRESTANTE DE LINEAS" style="padding:7px 10px; font-size:12.5px;">
+                    </div>
+                    <div class="form-group">
+                        <label for="nw-cappi" style="font-size:10px;">Puesto Inmediato (CAPPI)</label>
+                        <input type="text" id="nw-cappi" class="input-control" placeholder="Ej. JEFE DE OFICINA" style="padding:7px 10px; font-size:12.5px;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="nw-puesto-num" style="font-size:10px;">Número de Puesto</label>
+                    <input type="text" id="nw-puesto-num" class="input-control" placeholder="464020200" value="464020200" style="padding:7px 10px; font-size:12.5px;">
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
+                <button class="btn btn-secondary" onclick="closeNewWorkerModal()" style="padding:7px 14px; font-size:12px;">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveNewManualWorker()" style="padding:7px 18px; font-size:12px; font-weight:700;">Guardar Trabajador</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 3: Editar Trabajador Activo -->
+    <div id="edit-worker-modal" class="swiss-modal-backdrop">
+        <div class="swiss-modal-card" style="max-width:540px;">
+            <button class="swiss-modal-close" onclick="closeEditActiveWorkerModal()">&times;</button>
+            <div class="card-title" style="border-bottom:1px solid var(--card-border-subtle); padding-bottom:8px; margin:0; color:#fff;">
+                <svg viewBox="0 0 24 24" style="fill:var(--secondary); width:18px; height:18px;">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+                Editar Datos del Trabajador
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <div class="form-group">
+                    <label for="ew-name" style="font-size:10px;">Nombre Completo</label>
+                    <input type="text" id="ew-name" class="input-control" style="padding:7px 10px; font-size:13px; text-transform:uppercase;">
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1.5fr; gap:10px;">
+                    <div class="form-group">
+                        <label for="ew-rpe" style="font-size:10px;">RPE</label>
+                        <input type="text" id="ew-rpe" class="input-control" style="padding:7px 10px; font-size:13px; text-transform:uppercase; font-family:'Fira Code', monospace;">
+                    </div>
+                    <div class="form-group">
+                        <label for="ew-curp" style="font-size:10px;">CURP (18 caracteres)</label>
+                        <input type="text" id="ew-curp" class="input-control" maxlength="18" style="padding:7px 10px; font-size:13px; text-transform:uppercase; font-family:'Fira Code', monospace;">
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div class="form-group">
+                        <label for="ew-cappa" style="font-size:10px;">Puesto Actual (CAPPA)</label>
+                        <input type="text" id="ew-cappa" class="input-control" style="padding:7px 10px; font-size:12.5px;">
+                    </div>
+                    <div class="form-group">
+                        <label for="ew-cappi" style="font-size:10px;">Puesto Inmediato (CAPPI)</label>
+                        <input type="text" id="ew-cappi" class="input-control" style="padding:7px 10px; font-size:12.5px;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="ew-puesto-num" style="font-size:10px;">Número de Puesto</label>
+                    <input type="text" id="ew-puesto-num" class="input-control" style="padding:7px 10px; font-size:12.5px;">
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
+                <button class="btn btn-secondary" onclick="closeEditActiveWorkerModal()" style="padding:7px 14px; font-size:12px;">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveEditActiveWorker()" style="padding:7px 18px; font-size:12px; font-weight:700;">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 4: Editar Nombre del Curso -->
+    <div id="edit-course-modal" class="swiss-modal-backdrop">
+        <div class="swiss-modal-card" style="max-width:500px;">
+            <button class="swiss-modal-close" onclick="closeEditCourseModal()">&times;</button>
+            <div class="card-title" style="border-bottom:1px solid var(--card-border-subtle); padding-bottom:8px; margin:0; color:#fff;">
+                <svg viewBox="0 0 24 24" style="fill:var(--accent); width:18px; height:18px;">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+                Modificar Nombre del Curso
+            </div>
+            <input type="hidden" id="edit-course-id" value="">
+            <div class="form-group" style="margin-top:10px;">
+                <label for="edit-course-input-name" style="font-size:10px;">Nombre Oficial del Curso</label>
+                <input type="text" id="edit-course-input-name" class="input-control" list="common-courses-datalist" style="padding:7px 10px; font-size:13px; text-transform:uppercase;">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px;">
+                <button class="btn btn-secondary" onclick="closeEditCourseModal()" style="padding:7px 14px; font-size:12px;">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveEditedCourseName()" style="padding:7px 18px; font-size:12px; font-weight:700;">Actualizar Nombre</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Application Script Logic -->
+    <script src="js/defaultTemplate.js"></script>
     <script src="js/app.js"></script>
 </body>
 

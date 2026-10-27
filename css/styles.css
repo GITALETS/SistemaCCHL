@@ -1067,7 +1067,7 @@ tr.active-row td {
     transform: translateY(100px);
     opacity: 0;
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    z-index: 100;
+    z-index: 99999;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -1401,3 +1401,168 @@ tr.active-row td {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* ==========================================================================
+   MODO LIBRE Y GENERADOR EXPRESS DC-3
+   ========================================================================== */
+
+.swiss-modal-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(5, 8, 14, 0.8);
+    backdrop-filter: blur(6px);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+    animation: fadeInModal 0.2s ease-out;
+}
+
+@keyframes fadeInModal {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.swiss-modal-card {
+    width: 100%;
+    max-width: 680px;
+    max-height: 92vh;
+    overflow-y: auto;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    border-radius: var(--card-radius);
+    padding: 22px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.swiss-modal-close {
+    position: absolute;
+    right: 18px;
+    top: 18px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+.swiss-modal-close:hover {
+    color: #ffffff;
+}
+
+.express-btn-header,
+.swiss-btn-navaja {
+    background: linear-gradient(135deg, rgba(16, 133, 72, 0.25) 0%, rgba(59, 130, 246, 0.25) 100%);
+    border: 1px solid rgba(52, 211, 153, 0.45);
+    color: #34d399;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.express-btn-header:hover,
+.swiss-btn-navaja:hover {
+    background: linear-gradient(135deg, rgba(16, 133, 72, 0.4) 0%, rgba(59, 130, 246, 0.4) 100%);
+    border-color: #34d399;
+    color: #ffffff;
+    box-shadow: 0 4px 15px rgba(16, 133, 72, 0.3);
+    transform: translateY(-1px);
+}
+
+.table-btn-action {
+    padding: 4px 6px;
+    font-size: 11px;
+    border-radius: 5px;
+    border: 1px solid var(--card-border);
+    background: #111724;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.table-btn-action:hover {
+    background: #192438;
+    color: #ffffff;
+    border-color: var(--secondary-border);
+}
+
+.table-btn-action.btn-action-download {
+    color: #34d399;
+    border-color: rgba(16, 133, 72, 0.3);
+}
+
+.table-btn-action.btn-action-download:hover {
+    background: rgba(16, 133, 72, 0.2);
+    border-color: #34d399;
+    color: #ffffff;
+}
+
+.table-btn-action.btn-action-delete {
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.25);
+}
+
+.table-btn-action.btn-action-delete:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+    color: #ffffff;
+}
+
+.table-btn-action.btn-action-duplicate {
+    color: #60a5fa;
+    border-color: rgba(59, 130, 246, 0.25);
+}
+
+.table-btn-action.btn-action-duplicate:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: #3b82f6;
+    color: #ffffff;
+}
+
+.hours-cell-input {
+    width: 58px;
+    text-align: center;
+    padding: 4px 6px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #38bdf8 !important;
+    background: #090e17 !important;
+    border: 1px solid #1f2c42 !important;
+    border-radius: 5px;
+    transition: border-color 0.15s ease;
+}
+
+.hours-cell-input:focus {
+    border-color: #38bdf8 !important;
+    outline: none;
+    background: #0d1522 !important;
+}
+
+.badge-manual-worker {
+    background: rgba(217, 119, 6, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(217, 119, 6, 0.35);
+    font-size: 9.5px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.4px;
+}
+

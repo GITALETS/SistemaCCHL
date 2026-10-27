@@ -182,6 +182,26 @@ async function resetDatabaseAction() {
     }
 }
 
+function ensureTemplateLoaded() {
+    if (!AppState.templateFile && typeof DEFAULT_WORD_TEMPLATE_BASE64 !== 'undefined' && DEFAULT_WORD_TEMPLATE_BASE64) {
+        try {
+            const binaryStr = atob(DEFAULT_WORD_TEMPLATE_BASE64);
+            const len = binaryStr.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryStr.charCodeAt(i);
+            }
+            AppState.templateFile = bytes.buffer;
+            saveAsset('template_file', 'CCHL MODIFICABLE.docx', bytes.buffer);
+            setUploadZoneLoaded('zone-template', 'CCHL MODIFICABLE.docx (Oficial CFE)');
+            const defaultBadge = document.getElementById('default-template-badge');
+            if (defaultBadge) defaultBadge.style.display = 'inline-flex';
+        } catch (e) {
+            console.error("Error al cargar plantilla predeterminada:", e);
+        }
+    }
+}
+
 async function restoreSavedState() {
     try {
         // 1. Restore template file
@@ -189,16 +209,24 @@ async function restoreSavedState() {
         if (templateAsset) {
             processTemplateFile(templateAsset.data, templateAsset.name);
         } else {
-            // Auto-fetch default template from server/Render if not in IndexedDB
-            fetch('CCHL MODIFICABLE.docx?t=' + Date.now())
-                .then(res => res.ok ? res.arrayBuffer() : null)
-                .then(b => {
-                    if (b) {
-                        processTemplateFile(b, 'CCHL MODIFICABLE.docx');
-                        saveAsset('template_file', 'CCHL MODIFICABLE.docx', b);
-                    }
-                })
-                .catch(() => {});
+            // Check embedded base64 first so offline/local runs immediately!
+            ensureTemplateLoaded();
+            if (!AppState.templateFile) {
+                // Auto-fetch default template from server/Render if not in IndexedDB
+                fetch('CCHL MODIFICABLE.docx?t=' + Date.now())
+                    .then(res => res.ok ? res.arrayBuffer() : null)
+                    .then(b => {
+                        if (b) {
+                            processTemplateFile(b, 'CCHL MODIFICABLE.docx');
+                            saveAsset('template_file', 'CCHL MODIFICABLE.docx', b);
+                        } else {
+                            ensureTemplateLoaded();
+                        }
+                    })
+                    .catch(() => {
+                        ensureTemplateLoaded();
+                    });
+            }
         }
 
         // 2. Restore history files (Kardex)
@@ -228,6 +256,9 @@ async function restoreSavedState() {
                 })
                 .catch(() => {});
         }
+
+        // Load manual workers and sync list
+        mergeWorkersData();
 
         // 4. Update tab button ready state
         checkInitState();
@@ -274,7 +305,7 @@ function createDocxtemplaterInstance(zipContent) {
 }
 
 // Preprocesar plantilla Word para convertir MergeFields nativos a tags simples «NOMBRE»
-function preprocessTemplateXml(templateFileBuffer) {
+function preprocessTemplateXml(templateFileBuffer, includeLegend = false, isLoopMode = false) {
     const zipContent = new PizZip(templateFileBuffer);
     let docXml = zipContent.files["word/document.xml"].asText();
 
@@ -363,16 +394,23 @@ function preprocessTemplateXml(templateFileBuffer) {
     const serializer = new XMLSerializer();
     let newXmlText = serializer.serializeToString(xmlDoc);
 
-    // Inject regularisation legend if year <= 2021 (optimized with a balanced 7.5pt font and compact spacing to prevent blank page overflow)
-    const legendXml = '<w:p><w:r><w:t>«#hasLegend»</w:t></w:r></w:p><w:p><w:pPr><w:jc w:val="both"/><w:spacing w:before="30" w:after="10" w:line="170" w:lineRule="exact"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="15"/><w:szCs w:val="15"/><w:italic/></w:rPr><w:t>Dando seguimiento a la supervisión nacional se identificó que hay CCHL en años anteriores al 2024 que no están impresas por lo que se estarán regularizando con el nombre de la autoridades actuales para contar con el expediente completo atentamente Lic. Ivonne Reza Rugerio jefa de oficina de capacitación en funciones</w:t></w:r></w:p><w:p><w:r><w:t>«/hasLegend»</w:t></w:r></w:p>';
+    // Inyectar leyenda de regularización únicamente si includeLegend es true
+    if (includeLegend) {
+        let legendXml = '';
+        if (isLoopMode) {
+            legendXml = '<w:p><w:pPr><w:jc w:val="both"/><w:spacing w:before="30" w:after="10" w:line="170" w:lineRule="exact"/></w:pPr><w:r><w:t>«#hasLegend»</w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="15"/><w:szCs w:val="15"/><w:italic/></w:rPr><w:t>Dando seguimiento a la supervisión nacional se identificó que hay CCHL en años anteriores al 2024 que no están impresas por lo que se estarán regularizando con el nombre de la autoridades actuales para contar con el expediente completo atentamente Lic. Ivonne Reza Rugerio jefa de oficina de capacitación en funciones</w:t></w:r><w:r><w:t>«/hasLegend»</w:t></w:r></w:p>';
+        } else {
+            legendXml = '<w:p><w:pPr><w:jc w:val="both"/><w:spacing w:before="30" w:after="10" w:line="170" w:lineRule="exact"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="15"/><w:szCs w:val="15"/><w:italic/></w:rPr><w:t>Dando seguimiento a la supervisión nacional se identificó que hay CCHL en años anteriores al 2024 que no están impresas por lo que se estarán regularizando con el nombre de la autoridades actuales para contar con el expediente completo atentamente Lic. Ivonne Reza Rugerio jefa de oficina de capacitación en funciones</w:t></w:r></w:p>';
+        }
 
-    const sectPrIdx = newXmlText.lastIndexOf("<w:sectPr");
-    if (sectPrIdx !== -1) {
-        newXmlText = newXmlText.substring(0, sectPrIdx) + legendXml + newXmlText.substring(sectPrIdx);
-    } else {
-        const bodyEndIdx = newXmlText.lastIndexOf("</w:body>");
-        if (bodyEndIdx !== -1) {
-            newXmlText = newXmlText.substring(0, bodyEndIdx) + legendXml + newXmlText.substring(bodyEndIdx);
+        const sectPrIdx = newXmlText.lastIndexOf("<w:sectPr");
+        if (sectPrIdx !== -1) {
+            newXmlText = newXmlText.substring(0, sectPrIdx) + legendXml + newXmlText.substring(sectPrIdx);
+        } else {
+            const bodyEndIdx = newXmlText.lastIndexOf("</w:body>");
+            if (bodyEndIdx !== -1) {
+                newXmlText = newXmlText.substring(0, bodyEndIdx) + legendXml + newXmlText.substring(bodyEndIdx);
+            }
         }
     }
 
@@ -1041,20 +1079,11 @@ function syncWorkersFromHistory() {
 // Tab Switching
 function switchTab(tabId) {
     if (tabId === 'tab-generate') {
+        ensureTemplateLoaded();
         if (AppState.workers.length === 0 && Object.keys(AppState.historyFiles).length > 0) {
             syncWorkersFromHistory();
         }
-
-        const hasWorkers = AppState.workers.length > 0;
-        const hasTemplate = !!AppState.templateFile;
-
-        if (!hasWorkers || !hasTemplate) {
-            let missing = [];
-            if (!hasWorkers) missing.push("1. Archivos de Trabajadores (.xlsx)");
-            if (!hasTemplate) missing.push("2. Plantilla Word CCHL (.docx)");
-            showNotification(`No se puede abrir el Generador CCHL.\nFalta cargar: ${missing.join(' y ')}.`, true);
-            return;
-        }
+        mergeWorkersData();
     }
 
     playSound('click');
@@ -1073,28 +1102,15 @@ function switchTab(tabId) {
 
 // Enable Generator Tab check
 function checkInitState() {
+    ensureTemplateLoaded();
     if (AppState.workers.length === 0 && Object.keys(AppState.historyFiles).length > 0) {
         syncWorkersFromHistory();
     }
 
-    const hasWorkers = AppState.workers.length > 0;
-    const hasTemplate = !!AppState.templateFile;
-
-    if (hasWorkers && hasTemplate) {
-        if (navBtnGenerate) {
-            navBtnGenerate.disabled = false;
-            navBtnGenerate.classList.add('ready');
-            navBtnGenerate.title = "Ir al Generador CCHL";
-        }
-    } else {
-        if (navBtnGenerate) {
-            navBtnGenerate.disabled = false; // Permite el clic para informar al usuario
-            navBtnGenerate.classList.remove('ready');
-            let reasons = [];
-            if (!hasWorkers) reasons.push("Falta Archivo de Créditos (.xlsx)");
-            if (!hasTemplate) reasons.push("Falta Plantilla Word (.docx)");
-            navBtnGenerate.title = `Requerido: ${reasons.join(', ')}`;
-        }
+    if (navBtnGenerate) {
+        navBtnGenerate.disabled = false;
+        navBtnGenerate.classList.add('ready');
+        navBtnGenerate.title = "Ir al Generador CCHL";
     }
 }
 
@@ -1904,11 +1920,49 @@ function importInstructorsFromExcel(file) {
 }
 
 
-// Process workers data from CREDITOS
-function mergeWorkersData() {
-    if (rawCreditsWorkers.length === 0) return;
+function getManualWorkers() {
+    try {
+        const raw = localStorage.getItem('cfe_manual_workers');
+        return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+        return [];
+    }
+}
 
-    AppState.workers = JSON.parse(JSON.stringify(rawCreditsWorkers)).sort((a, b) => {
+function saveManualWorkers(workers) {
+    try {
+        localStorage.setItem('cfe_manual_workers', JSON.stringify(workers));
+    } catch (e) {}
+}
+
+// Process workers data from CREDITOS and Manual Workers
+function mergeWorkersData() {
+    const manual = getManualWorkers();
+    let baseList = [];
+    if (rawCreditsWorkers && rawCreditsWorkers.length > 0) {
+        baseList = JSON.parse(JSON.stringify(rawCreditsWorkers));
+    }
+
+    const map = new Map();
+    baseList.forEach(w => map.set(w.name.trim().toUpperCase(), w));
+
+    manual.forEach(w => {
+        const k = w.name.trim().toUpperCase();
+        if (!map.has(k)) {
+            w.isManualWorker = true;
+            map.set(k, w);
+        } else {
+            const existing = map.get(k);
+            existing.isManualWorker = true;
+            if (w.curp) existing.curp = w.curp;
+            if (w.rpe) existing.rpe = w.rpe;
+            if (w.cappa) existing.cappa = w.cappa;
+            if (w.cappi) existing.cappi = w.cappi;
+            if (w.puesto) existing.puesto = w.puesto;
+        }
+    });
+
+    AppState.workers = Array.from(map.values()).sort((a, b) => {
         return String(a.name || '').localeCompare(String(b.name || ''), 'es', { sensitivity: 'base' });
     });
     renderWorkerList();
@@ -2539,10 +2593,18 @@ function renderWorkerList() {
     }
 
     if (filtered.length === 0) {
-        workerListItemsContainer.innerHTML = `
-            <div style="text-align: center; color: var(--text-muted); font-style: italic; padding: 20px 0; font-size:12px;">
-                No se encontraron trabajadores con los filtros activos.
-            </div>`;
+        if (AppState.workers.length === 0) {
+            workerListItemsContainer.innerHTML = `
+                <div style="text-align: center; color: var(--text-muted); font-style: italic; padding: 25px 12px; font-size:12px; display:flex; flex-direction:column; align-items:center; gap:10px;">
+                    <span>No hay trabajadores registrados aún.</span>
+                    <button class="btn btn-primary" onclick="openNewWorkerModal()" style="padding:6px 12px; font-size:11px;">+ Crear Trabajador</button>
+                </div>`;
+        } else {
+            workerListItemsContainer.innerHTML = `
+                <div style="text-align: center; color: var(--text-muted); font-style: italic; padding: 20px 0; font-size:12px;">
+                    No se encontraron trabajadores con los filtros activos.
+                </div>`;
+        }
         return;
     }
 
@@ -2555,13 +2617,16 @@ function renderWorkerList() {
             item.classList.add('active');
         }
 
+        const manualBadgeHtml = w.isManualWorker ? `<span class="badge-manual-worker" style="margin-left:auto; font-size:8px; padding:1px 4px;">Manual</span>` : '';
+
         item.innerHTML = `
-            <div class="left-sec">
+            <div class="left-sec" style="flex:1; min-width:0; display:flex; align-items:center; gap:6px;">
                 <label class="checkbox-container" style="padding-left:18px;" onclick="event.stopPropagation()">
                     <input type="checkbox" ${isCompleted ? 'checked' : ''} onchange="toggleWorkerCompletedFromList('${w.name}', this.checked)">
                     <span class="checkmark" style="height:14px; width:14px; border-radius:3px;"></span>
                 </label>
-                <span class="worker-name-text" title="${w.name}">${w.name}</span>
+                <span class="worker-name-text" title="${w.name}" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${w.name}</span>
+                ${manualBadgeHtml}
             </div>
         `;
 
@@ -2626,6 +2691,14 @@ function selectWorker(worker, resetSelection = true) {
     actWorkerCappa.textContent = worker.cappa || wPuesto || 'Sin Puesto Asignado';
     actWorkerCappi.textContent = worker.cappi || 'Sin Puesto Asignado';
 
+    // Show/hide manual worker badge and edit/delete buttons
+    const manualBadge = document.getElementById('act-worker-manual-badge');
+    if (manualBadge) manualBadge.style.display = worker.isManualWorker ? 'inline-block' : 'none';
+    const btnEdit = document.getElementById('btn-edit-active-worker');
+    if (btnEdit) btnEdit.style.display = 'inline-flex';
+    const btnDel = document.getElementById('btn-delete-active-worker');
+    if (btnDel) btnDel.style.display = worker.isManualWorker ? 'inline-flex' : 'none';
+
     // Load saved Number of Puesto or extract default
     const savedPuestoNum = localStorage.getItem(`cfe_puesto_num_${wName}`);
     if (savedPuestoNum) {
@@ -2640,6 +2713,14 @@ function selectWorker(worker, resetSelection = true) {
     // Load saved completed checkbox
     const savedCompleted = localStorage.getItem(`cfe_completed_${wName}`) === 'true';
     actWorkerCompletedCheckbox.checked = savedCompleted;
+
+    // Load saved or default firmantes / jefes for active worker
+    const actPatronInput = document.getElementById('act-worker-patron-rep');
+    const actWorkerInput = document.getElementById('act-worker-worker-rep');
+    const savedPatron = localStorage.getItem(`cfe_patron_rep_${wName}`) || localStorage.getItem('cfe_patron_rep') || "JOSE DAVID LOPEZ MEDINA";
+    const savedWorkerRep = localStorage.getItem(`cfe_worker_rep_${wName}`) || localStorage.getItem('cfe_worker_rep') || "JUAN CARLOS SERNA GOMEZ";
+    if (actPatronInput) actPatronInput.value = savedPatron;
+    if (actWorkerInput) actWorkerInput.value = savedWorkerRep;
 
     // Gather required courses from CREDITOS and map their Kardex dates
     loadCoursesForSelectedWorker(resetSelection);
@@ -2657,7 +2738,25 @@ function selectWorker(worker, resetSelection = true) {
         updateLivePreview(wName, wCurp, null);
     }
 }
-    
+
+function saveActiveWorkerJefes() {
+    const worker = AppState.selectedWorker;
+    if (!worker) return;
+    const pVal = document.getElementById('act-worker-patron-rep')?.value.trim().toUpperCase() || "JOSE DAVID LOPEZ MEDINA";
+    const wVal = document.getElementById('act-worker-worker-rep')?.value.trim().toUpperCase() || "JUAN CARLOS SERNA GOMEZ";
+    localStorage.setItem(`cfe_patron_rep_${worker.name}`, pVal);
+    localStorage.setItem(`cfe_worker_rep_${worker.name}`, wVal);
+}
+
+function resetActiveWorkerJefesDefaults() {
+    const actPatronInput = document.getElementById('act-worker-patron-rep');
+    const actWorkerInput = document.getElementById('act-worker-worker-rep');
+    if (actPatronInput) actPatronInput.value = "JOSE DAVID LOPEZ MEDINA";
+    if (actWorkerInput) actWorkerInput.value = "JUAN CARLOS SERNA GOMEZ";
+    saveActiveWorkerJefes();
+    showNotification("Firmantes restablecidos a valores predeterminados.");
+}
+
 function saveCourseState(workerName, course) {
     if (!workerName || !course) return;
     const cleanName = workerName.trim().toUpperCase();
@@ -2665,9 +2764,12 @@ function saveCourseState(workerName, course) {
     const stateKey = `cfe_course_state_${cleanName}_${cleanNameCourse}_${course.puestoType}_${cleanCourseName(course.bateria || '')}`;
     const state = {
         endDate: course.endDate ? course.endDate.toISOString().split('T')[0] : null,
+        startDate: course.startDate ? course.startDate.toISOString().split('T')[0] : null,
         instructorMode: course.instructorMode,
         manualInstructor: course.manualInstructor,
-        selected: selectedCourseIds.has(course.id)
+        selected: selectedCourseIds.has(course.id),
+        hours: course.hours,
+        customName: course.name
     };
     localStorage.setItem(stateKey, JSON.stringify(state));
 }
@@ -2808,7 +2910,15 @@ function loadCoursesForSelectedWorker(resetSelection) {
         }
     });
 
-    combined.forEach((req, idx) => {
+    // Check soft-deleted courses
+    const delKey = `cfe_deleted_courses_${cleanName}`;
+    const deletedList = JSON.parse(localStorage.getItem(delKey)) || [];
+
+    let currentId = 0;
+    combined.forEach((req) => {
+        const isDeleted = deletedList.includes(`${req.name.toUpperCase()}_${req.puestoType}`);
+        if (isDeleted) return; // Skip deleted
+
         const cleanReqName = cleanCourseName(req.name);
         let endDate = req.endDate ? (req.endDate instanceof Date ? req.endDate : new Date(req.endDate)) : (kardexCoursesMap[cleanReqName] || null);
 
@@ -2818,8 +2928,6 @@ function loadCoursesForSelectedWorker(resetSelection) {
             if (fuzzyKey) endDate = kardexCoursesMap[fuzzyKey];
         }
 
-        let startDate = endDate ? calculateStartDate(endDate, req.hours) : null;
-
         // Assign random instructor from catalog
         let randInst = '';
         if (AppState.instructors.length > 0) {
@@ -2828,18 +2936,18 @@ function loadCoursesForSelectedWorker(resetSelection) {
         }
 
         const courseObj = {
-            id: idx,
+            id: currentId++,
             name: req.name,
-            hours: req.hours,
-            area: req.area,
-            puestoType: req.puestoType,
+            hours: req.hours || 40,
+            area: req.area || '2600-EDUCACION',
+            puestoType: req.puestoType || 'CAPPA',
             bateria: req.bateria || '',
             isManual: req.isManual,
-            instructorMode: 'random', // 'random' or 'manual'
+            instructorMode: 'random',
             randomInstructor: randInst,
             manualInstructor: randInst,
             endDate: endDate,
-            startDate: startDate,
+            startDate: null,
             fromKardex: !!endDate,
             manualDate: !endDate
         };
@@ -2852,22 +2960,23 @@ function loadCoursesForSelectedWorker(resetSelection) {
         if (savedStateStr) {
             try {
                 const savedState = JSON.parse(savedStateStr);
+                if (savedState.customName) courseObj.name = savedState.customName;
+                if (savedState.hours !== undefined && !isNaN(savedState.hours) && savedState.hours > 0) {
+                    courseObj.hours = parseInt(savedState.hours);
+                }
                 if (savedState.instructorMode) courseObj.instructorMode = savedState.instructorMode;
                 if (savedState.manualInstructor) {
-                    if (AppState.instructors.includes(savedState.manualInstructor)) {
-                        courseObj.manualInstructor = savedState.manualInstructor;
-                    } else {
-                        courseObj.instructorMode = 'random';
+                    courseObj.manualInstructor = savedState.manualInstructor;
+                    if (!AppState.instructors.includes(savedState.manualInstructor)) {
+                        AppState.instructors.push(savedState.manualInstructor);
                     }
                 }
                 if (savedState.endDate !== undefined) {
                     if (savedState.endDate) {
                         courseObj.endDate = new Date(savedState.endDate);
-                        courseObj.startDate = calculateStartDate(courseObj.endDate, courseObj.hours);
                         courseObj.manualDate = false;
                     } else {
                         courseObj.endDate = null;
-                        courseObj.startDate = null;
                         courseObj.manualDate = true;
                     }
                 }
@@ -2879,8 +2988,11 @@ function loadCoursesForSelectedWorker(resetSelection) {
             }
         }
 
+        // Calculate startDate with finalized hours and endDate
+        courseObj.startDate = courseObj.endDate ? calculateStartDate(courseObj.endDate, courseObj.hours) : null;
+
         if (shouldSelect) {
-            selectedCourseIds.add(idx);
+            selectedCourseIds.add(courseObj.id);
         }
 
         AppState.workerCoursesList.push(courseObj);
@@ -2895,8 +3007,11 @@ function renderCoursesTableForActiveWorker() {
     if (AppState.workerCoursesList.length === 0) {
         tableCoursesBody.innerHTML = `
             <tr>
-                <td colspan="7" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 20px 0;">
-                    No hay cursos registrados para este trabajador. Sube los archivos de Créditos o CCHL/Kardex, o agrégalos con el botón "+ Agregar Curso".
+                <td colspan="8" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 25px 0;">
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                        <span>No hay cursos registrados para este trabajador.</span>
+                        <button class="btn btn-secondary" onclick="toggleManualCourseForm(true)" style="padding:5px 12px; font-size:11px;">+ Agregar Curso Manual</button>
+                    </div>
                 </td>
             </tr>`;
         btnGenerateSingle.disabled = true;
@@ -2921,19 +3036,14 @@ function renderCoursesTableForActiveWorker() {
             const isSel = course.instructorMode === 'manual' && course.manualInstructor === inst;
             instOptionsHtml += `<option value="${inst}" ${isSel ? 'selected' : ''}>${inst}</option>`;
         });
+        instOptionsHtml += `<option value="__custom__">+ Otro instructor...</option>`;
 
         let nameCellHtml = `<div style="display:flex; flex-direction:column; gap:2px;"><div style="display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap;"><span>${course.name}</span>`;
         if (course.fromKardex) {
             nameCellHtml += `<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 9px; padding: 2px 6px; border: 1px solid rgba(16, 185, 129, 0.3);">Kardex</span>`;
         }
         if (course.isManual) {
-            nameCellHtml += `
-                <button onclick="event.stopPropagation(); deleteManualCourse('${course.name}', '${course.puestoType}')" class="btn btn-secondary" style="padding: 2px 4px; min-height: unset; background: rgba(248, 113, 113, 0.1); border-color: rgba(248, 113, 113, 0.2); color: #fca5a5; display: inline-flex;" title="Eliminar Curso Manual">
-                    <svg viewBox="0 0 24 24" style="width: 10px; height: 10px; fill: currentColor;">
-                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                    </svg>
-                </button>
-            `;
+            nameCellHtml += `<span class="badge" style="background: rgba(217, 119, 6, 0.15); color: #fbbf24; font-size: 9px; padding: 2px 6px; border: 1px solid rgba(217, 119, 6, 0.3);">Manual</span>`;
         }
         nameCellHtml += `</div>`;
         if (course.bateria) {
@@ -2949,8 +3059,10 @@ function renderCoursesTableForActiveWorker() {
                 </label>
             </td>
             <td style="font-weight:600; font-size:13px;" class="course-cell-click">${nameCellHtml}</td>
-            <td class="course-cell-click"><span class="badge ${course.puestoType === 'CAPPA' ? 'badge-cappa' : 'badge-cappi'}" style="font-size:10px; padding:3px 8px;">${course.puestoType}</span></td>
-            <td style="text-align: center; font-weight:700; color:var(--secondary); font-size:13px;" class="course-cell-click">${course.hours}h</td>
+            <td class="course-cell-click"><span class="badge ${course.puestoType === 'CAPPA' ? 'badge-cappa' : 'badge-cappi'}" style="font-size:10px; padding:3px 8px; cursor:pointer;" onclick="toggleCoursePuestoType(${course.id})" title="Clic para alternar entre CAPPA y CAPPI">${course.puestoType}</span></td>
+            <td style="text-align: center;">
+                <input type="number" min="1" max="999" value="${course.hours}" class="hours-cell-input" onchange="updateCourseHours(${course.id}, this.value)" onclick="event.stopPropagation()" title="Modificar horas del curso">
+            </td>
             <td>
                 <select class="input-control" style="padding: 5px 8px; font-size:12px;" onchange="updateCourseInstructorMode(${course.id}, this.value)">
                     ${instOptionsHtml}
@@ -2968,6 +3080,22 @@ function renderCoursesTableForActiveWorker() {
             </td>
             <td>
                 <input type="date" class="input-control" style="padding: 5px 8px; font-size:12px; width:110px; background:rgba(0,0,0,0.2)" value="${startVal}" readonly>
+            </td>
+            <td style="text-align:center;">
+                <div style="display:inline-flex; gap:4px; align-items:center;">
+                    <button onclick="event.stopPropagation(); generateSingleCourseDC3(${course.id})" class="table-btn-action btn-action-download" title="Descargar este DC-3 en Word (.docx) inmediatamente">
+                        <svg viewBox="0 0 24 24" style="width:12px; height:12px; fill:currentColor;"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                    </button>
+                    <button onclick="event.stopPropagation(); duplicateCourse(${course.id})" class="table-btn-action btn-action-duplicate" title="Duplicar este curso">
+                        <svg viewBox="0 0 24 24" style="width:12px; height:12px; fill:currentColor;"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                    </button>
+                    <button onclick="event.stopPropagation(); openEditCourseModal(${course.id})" class="table-btn-action" title="Editar nombre del curso">
+                        <svg viewBox="0 0 24 24" style="width:12px; height:12px; fill:currentColor;"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                    </button>
+                    <button onclick="event.stopPropagation(); deleteAnyCourse(${course.id})" class="table-btn-action btn-action-delete" title="Eliminar curso de este trabajador">
+                        <svg viewBox="0 0 24 24" style="width:12px; height:12px; fill:currentColor;"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    </button>
+                </div>
             </td>
         `;
 
@@ -3069,20 +3197,77 @@ function updateSelectedCount() {
 // Row inputs changes
 function updateCourseInstructorMode(id, val) {
     const course = AppState.workerCoursesList.find(c => c.id === id);
-    if (course) {
-        if (val === 'random') {
-            course.instructorMode = 'random';
-        } else {
+    if (!course) return;
+
+    if (val === '__custom__') {
+        const customName = prompt("Ingresa el nombre del instructor (ej. para cursos de años anteriores):");
+        if (customName && customName.trim()) {
+            const clean = customName.trim().toUpperCase();
+            if (!AppState.instructors.includes(clean)) {
+                AppState.instructors.push(clean);
+                localStorage.setItem('cfe_instructors_catalog', JSON.stringify(AppState.instructors));
+                updateInstructorsDatalist();
+            }
             course.instructorMode = 'manual';
-            course.manualInstructor = val;
+            course.manualInstructor = clean;
+            if (AppState.selectedWorker) {
+                saveCourseState(AppState.selectedWorker.name, course);
+            }
+            if (activePreviewCourseId === id) {
+                selectCourseForPreview(course);
+            }
+            renderCoursesTableForActiveWorker();
+        } else {
+            renderCoursesTableForActiveWorker();
         }
-        if (AppState.selectedWorker) {
-            saveCourseState(AppState.selectedWorker.name, course);
-        }
-        if (activePreviewCourseId === id) {
-            selectCourseForPreview(course);
-        }
+        return;
     }
+
+    if (val === 'random') {
+        course.instructorMode = 'random';
+    } else {
+        course.instructorMode = 'manual';
+        course.manualInstructor = val;
+    }
+    if (AppState.selectedWorker) {
+        saveCourseState(AppState.selectedWorker.name, course);
+    }
+    if (activePreviewCourseId === id) {
+        selectCourseForPreview(course);
+    }
+}
+
+function shuffleInstructorsForActiveWorker() {
+    if (!AppState.selectedWorker || AppState.workerCoursesList.length === 0) {
+        showNotification("No hay cursos para variar instructores.", true);
+        return;
+    }
+
+    if (AppState.instructors.length === 0) {
+        showNotification("No hay instructores disponibles en el catálogo.", true);
+        return;
+    }
+
+    let pool = [...AppState.instructors];
+    for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+
+    AppState.workerCoursesList.forEach((c, idx) => {
+        const picked = pool[idx % pool.length];
+        c.randomInstructor = picked;
+        c.manualInstructor = picked;
+        c.instructorMode = 'random';
+        saveCourseState(AppState.selectedWorker.name, c);
+    });
+
+    renderCoursesTableForActiveWorker();
+    if (activePreviewCourseId !== null) {
+        const curr = AppState.workerCoursesList.find(c => c.id === activePreviewCourseId);
+        if (curr) selectCourseForPreview(curr);
+    }
+    showNotification("Instructores variados correctamente para los cursos.");
 }
 
 function updateCourseEndDate(id, val) {
@@ -3381,8 +3566,17 @@ function buildCourseContext(course) {
     const wCappa = worker.cappa || '';
     const wCappi = worker.cappi || '';
 
-    const patronRep = document.getElementById('config-patron-rep').value || localStorage.getItem('cfe_patron_rep') || "JOSE DAVID LOPEZ MEDINA";
-    const workerRep = document.getElementById('config-worker-rep').value || localStorage.getItem('cfe_worker_rep') || "JUAN CARLOS SERNA GOMEZ";
+    const patronRep = (AppState.selectedWorker && localStorage.getItem(`cfe_patron_rep_${AppState.selectedWorker.name}`)) ||
+                      document.getElementById('act-worker-patron-rep')?.value ||
+                      document.getElementById('config-patron-rep')?.value ||
+                      localStorage.getItem('cfe_patron_rep') ||
+                      "JOSE DAVID LOPEZ MEDINA";
+
+    const workerRep = (AppState.selectedWorker && localStorage.getItem(`cfe_worker_rep_${AppState.selectedWorker.name}`)) ||
+                      document.getElementById('act-worker-worker-rep')?.value ||
+                      document.getElementById('config-worker-rep')?.value ||
+                      localStorage.getItem('cfe_worker_rep') ||
+                      "JUAN CARLOS SERNA GOMEZ";
     const companyName = document.getElementById('config-company').value || localStorage.getItem('cfe_company') || "COMISIÓN FEDERAL DE ELECTRICIDAD";
 
     const displayPuesto = (course && course.bateria ? extractOccupationName(course.bateria) : '') || 
@@ -3393,7 +3587,7 @@ function buildCourseContext(course) {
                       extractOccupationCode(wCappa || wCappi);
 
     const activeInstructor = course.instructorMode === 'random' ? course.randomInstructor : course.manualInstructor;
-    const hasLegend = course.endDate && course.endDate.getFullYear() <= 2021;
+    const hasLegend = course.hasLegend !== undefined ? course.hasLegend : (course.endDate && course.endDate.getFullYear() <= 2021);
 
     const courseCtx = {
         NOMBRE: formatSurnamesFirst(wName).toUpperCase(),
@@ -3496,7 +3690,8 @@ async function generateMergedDocument() {
 
     try {
         // Programmatic wrapping of template XML for looping
-        const zipContent = preprocessTemplateXml(AppState.templateFile);
+        const anyLegend = selected.some(c => c.hasLegend !== undefined ? c.hasLegend : (c.endDate && c.endDate.getFullYear() <= 2021));
+        const zipContent = preprocessTemplateXml(AppState.templateFile, anyLegend, true);
         let docXml = zipContent.files["word/document.xml"].asText();
 
         const bodyStart = docXml.indexOf("<w:body>");
@@ -3590,7 +3785,8 @@ async function generateSeparateZipDocuments() {
 
     try {
         for (const course of selected) {
-            const zipContent = preprocessTemplateXml(AppState.templateFile);
+            const hasLegend = course.hasLegend !== undefined ? course.hasLegend : (course.endDate && course.endDate.getFullYear() <= 2021);
+            const zipContent = preprocessTemplateXml(AppState.templateFile, hasLegend, false);
             const doc = createDocxtemplaterInstance(zipContent);
 
             const dataCtx = buildCourseContext(course);
@@ -3665,7 +3861,7 @@ function printSelectedCoursesAsPDF() {
                               extractOccupationName(cappaVal || cappiVal) || '--';
         const coursePuestoNum = (course.bateria && extractOccupationCode(course.bateria) !== '464020200' ? extractOccupationCode(course.bateria) : '') || puestoNum;
         const activeInstructor = course.instructorMode === 'random' ? course.randomInstructor : course.manualInstructor;
-        const hasLegend = course.endDate && course.endDate.getFullYear() <= 2021;
+        const hasLegend = course.hasLegend !== undefined ? course.hasLegend : (course.endDate && course.endDate.getFullYear() <= 2021);
 
         // Evaluar año de inicio para representantes
         const isPatronValid = isSignatureValidForCourseYear('patron', course.endDate);
@@ -4097,6 +4293,908 @@ function downloadExampleExcelTemplate() {
     } catch (e) {
         showNotification("Error al generar plantilla de ejemplo: " + e.message, true);
     }
+}
+
+/* ==========================================================================
+   MODO LIBRE, CURSOS DINÁMICOS Y GENERADOR EXPRESS DC-3
+   ========================================================================== */
+
+// 1. Modificar horas de un curso directamente
+function updateCourseHours(courseId, newHours) {
+    const h = parseInt(newHours);
+    if (isNaN(h) || h <= 0) return;
+    const course = AppState.workerCoursesList.find(c => c.id === courseId);
+    if (!course || !AppState.selectedWorker) return;
+
+    course.hours = h;
+    if (course.endDate) {
+        course.startDate = calculateStartDate(course.endDate, course.hours);
+    }
+    saveCourseState(AppState.selectedWorker.name, course);
+    renderCoursesTableForActiveWorker();
+    if (activePreviewCourseId === courseId) {
+        updateLivePreview(AppState.selectedWorker.name, AppState.selectedWorker.curp, course);
+    }
+}
+
+// 2. Alternar tipo de puesto CAPPA <-> CAPPI
+function toggleCoursePuestoType(courseId) {
+    const course = AppState.workerCoursesList.find(c => c.id === courseId);
+    if (!course || !AppState.selectedWorker) return;
+    course.puestoType = course.puestoType === 'CAPPA' ? 'CAPPI' : 'CAPPA';
+    saveCourseState(AppState.selectedWorker.name, course);
+    renderCoursesTableForActiveWorker();
+    if (activePreviewCourseId === courseId) {
+        updateLivePreview(AppState.selectedWorker.name, AppState.selectedWorker.curp, course);
+    }
+}
+
+// 3. Eliminar cualquier curso de la lista activa
+function deleteAnyCourse(courseId) {
+    const course = AppState.workerCoursesList.find(c => c.id === courseId);
+    if (!course || !AppState.selectedWorker) return;
+    if (!confirm(`¿Deseas eliminar el curso "${course.name}" (${course.puestoType}) para este trabajador?`)) return;
+
+    const cleanName = AppState.selectedWorker.name.trim().toUpperCase();
+    if (course.isManual) {
+        deleteManualCourse(course.name, course.puestoType);
+    } else {
+        const delKey = `cfe_deleted_courses_${cleanName}`;
+        let deletedList = JSON.parse(localStorage.getItem(delKey)) || [];
+        deletedList.push(`${course.name.toUpperCase()}_${course.puestoType}`);
+        localStorage.setItem(delKey, JSON.stringify(deletedList));
+        loadCoursesForSelectedWorker(false);
+        showNotification(`Curso "${course.name}" eliminado de la lista.`);
+    }
+}
+
+// 4. Duplicar curso
+function duplicateCourse(courseId) {
+    const course = AppState.workerCoursesList.find(c => c.id === courseId);
+    if (!course || !AppState.selectedWorker) return;
+
+    const cleanName = AppState.selectedWorker.name.trim().toUpperCase();
+    const manualKey = `cfe_manual_courses_${cleanName}`;
+    let manualList = JSON.parse(localStorage.getItem(manualKey)) || [];
+
+    const newName = `${course.name} (MOD)`;
+    manualList.push({
+        name: newName,
+        hours: course.hours,
+        area: course.area || '2600-EDUCACION',
+        puestoType: course.puestoType || 'CAPPA'
+    });
+    localStorage.setItem(manualKey, JSON.stringify(manualList));
+
+    const cleanCourse = cleanCourseName(newName);
+    const stateKey = `cfe_course_state_${cleanName}_${cleanCourse}_${course.puestoType}_`;
+    localStorage.setItem(stateKey, JSON.stringify({
+        endDate: course.endDate ? course.endDate.toISOString().split('T')[0] : null,
+        instructorMode: course.instructorMode,
+        manualInstructor: course.manualInstructor,
+        selected: true,
+        hours: course.hours
+    }));
+
+    loadCoursesForSelectedWorker(false);
+    showNotification(`Curso duplicado como "${newName}".`);
+}
+
+// 5. Editar Nombre del Curso
+function openEditCourseModal(courseId) {
+    const course = AppState.workerCoursesList.find(c => c.id === courseId);
+    if (!course) return;
+    document.getElementById('edit-course-id').value = courseId;
+    document.getElementById('edit-course-input-name').value = course.name;
+    document.getElementById('edit-course-modal').style.display = 'flex';
+}
+
+function closeEditCourseModal() {
+    document.getElementById('edit-course-modal').style.display = 'none';
+}
+
+function saveEditedCourseName() {
+    const courseId = parseInt(document.getElementById('edit-course-id').value);
+    const newName = document.getElementById('edit-course-input-name').value.trim().toUpperCase();
+    if (!newName) {
+        showNotification("El nombre no puede estar vacío.", true);
+        return;
+    }
+    const course = AppState.workerCoursesList.find(c => c.id === courseId);
+    if (!course || !AppState.selectedWorker) return;
+
+    course.name = newName;
+    saveCourseState(AppState.selectedWorker.name, course);
+    renderCoursesTableForActiveWorker();
+    if (activePreviewCourseId === courseId) {
+        updateLivePreview(AppState.selectedWorker.name, AppState.selectedWorker.curp, course);
+    }
+    closeEditCourseModal();
+    showNotification("Nombre del curso actualizado.");
+}
+
+// 6. Descargar un solo DC-3 en Word directamente
+async function generateSingleCourseDC3(courseId) {
+    ensureTemplateLoaded();
+    if (!AppState.templateFile || !AppState.selectedWorker) {
+        showNotification("Falta plantilla Word o trabajador seleccionado.", true);
+        return;
+    }
+    const course = AppState.workerCoursesList.find(c => c.id === courseId);
+    if (!course) return;
+
+    if (!course.endDate) {
+        course.endDate = generateRandomWeekday(
+            parseInt(document.getElementById('config-rand-min-year').value) || 2016,
+            parseInt(document.getElementById('config-rand-max-year').value) || 2025
+        );
+        course.startDate = calculateStartDate(course.endDate, course.hours);
+        saveCourseState(AppState.selectedWorker.name, course);
+        renderCoursesTableForActiveWorker();
+    }
+
+    playSound('generate');
+    try {
+        const hasLegend = course.hasLegend !== undefined ? course.hasLegend : (course.endDate && course.endDate.getFullYear() <= 2021);
+        const zipContent = preprocessTemplateXml(AppState.templateFile, hasLegend, false);
+        const doc = createDocxtemplaterInstance(zipContent);
+        const ctx = buildCourseContext(course);
+        doc.setData(ctx);
+        doc.render();
+        const out = doc.getZip().generate({
+            type: "blob",
+            mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        });
+        const cleanWorker = formatSurnamesFirst(AppState.selectedWorker.name);
+        const cleanCourse = cleanCourseName(course.name).substring(0, 30);
+        saveAs(out, `DC3_${cleanWorker}_${cleanCourse}.docx`);
+        showNotification(`DC-3 de "${course.name}" generado exitosamente.`);
+    } catch (err) {
+        console.error("Error al generar DC-3 individual:", err);
+        showNotification("Error al generar el documento Word.", true);
+    }
+}
+
+// 7. Gestión de Nuevo Trabajador Manual (Modo Libre)
+function openNewWorkerModal() {
+    document.getElementById('nw-name').value = '';
+    document.getElementById('nw-rpe').value = '';
+    document.getElementById('nw-curp').value = '';
+    document.getElementById('nw-cappa').value = '';
+    document.getElementById('nw-cappi').value = '';
+    document.getElementById('nw-puesto-num').value = '464020200';
+    document.getElementById('new-worker-modal').style.display = 'flex';
+}
+
+function closeNewWorkerModal() {
+    document.getElementById('new-worker-modal').style.display = 'none';
+}
+
+function saveNewManualWorker() {
+    const name = document.getElementById('nw-name').value.trim().toUpperCase();
+    const rpe = document.getElementById('nw-rpe').value.trim().toUpperCase();
+    const curp = document.getElementById('nw-curp').value.trim().toUpperCase();
+    const cappa = document.getElementById('nw-cappa').value.trim().toUpperCase();
+    const cappi = document.getElementById('nw-cappi').value.trim().toUpperCase();
+    const puestoNum = document.getElementById('nw-puesto-num').value.trim();
+
+    if (!name) {
+        showNotification("El nombre del trabajador es obligatorio.", true);
+        return;
+    }
+
+    let manual = getManualWorkers();
+    const isDup = manual.some(w => w.name.toUpperCase() === name);
+    if (isDup) {
+        showNotification("Ya existe un trabajador con este nombre.", true);
+        return;
+    }
+
+    const newWorker = {
+        name: name,
+        rpe: rpe || '9K000',
+        curp: curp || '',
+        cappa: cappa || 'TRABAJADOR GENERAL',
+        cappi: cappi || '',
+        puesto: cappa || 'TRABAJADOR GENERAL',
+        isManualWorker: true,
+        requiredCourses: []
+    };
+
+    manual.push(newWorker);
+    saveManualWorkers(manual);
+
+    if (puestoNum) {
+        localStorage.setItem(`cfe_puesto_num_${name}`, puestoNum);
+    }
+
+    mergeWorkersData();
+
+    // Buscar y seleccionar el trabajador creado
+    const found = AppState.workers.find(w => w.name === name);
+    if (found) {
+        selectWorker(found);
+    }
+
+    closeNewWorkerModal();
+    switchTab('tab-generate');
+    showNotification(`Trabajador "${name}" creado exitosamente.`);
+}
+
+// 8. Editar Trabajador Activo
+function openEditActiveWorkerModal() {
+    const w = AppState.selectedWorker;
+    if (!w) return;
+    document.getElementById('ew-name').value = w.name || '';
+    document.getElementById('ew-rpe').value = w.rpe || '';
+    document.getElementById('ew-curp').value = w.curp || '';
+    document.getElementById('ew-cappa').value = w.cappa || w.puesto || '';
+    document.getElementById('ew-cappi').value = w.cappi || '';
+    document.getElementById('ew-puesto-num').value = actWorkerPuestoNum.value || '464020200';
+    document.getElementById('edit-worker-modal').style.display = 'flex';
+}
+
+function closeEditActiveWorkerModal() {
+    document.getElementById('edit-worker-modal').style.display = 'none';
+}
+
+function saveEditActiveWorker() {
+    const w = AppState.selectedWorker;
+    if (!w) return;
+
+    const oldName = w.name;
+    const newName = document.getElementById('ew-name').value.trim().toUpperCase();
+    const rpe = document.getElementById('ew-rpe').value.trim().toUpperCase();
+    const curp = document.getElementById('ew-curp').value.trim().toUpperCase();
+    const cappa = document.getElementById('ew-cappa').value.trim().toUpperCase();
+    const cappi = document.getElementById('ew-cappi').value.trim().toUpperCase();
+    const puestoNum = document.getElementById('ew-puesto-num').value.trim();
+
+    if (!newName) {
+        showNotification("El nombre no puede estar vacío.", true);
+        return;
+    }
+
+    w.name = newName;
+    w.rpe = rpe;
+    w.curp = curp;
+    w.cappa = cappa;
+    w.cappi = cappi;
+    w.puesto = cappa;
+
+    // Actualizar en manual workers si existe o añadirlo
+    let manual = getManualWorkers();
+    const idx = manual.findIndex(mw => mw.name.toUpperCase() === oldName.toUpperCase());
+    if (idx !== -1) {
+        manual[idx] = { ...manual[idx], name: newName, rpe, curp, cappa, cappi, puesto: cappa };
+    } else {
+        manual.push({ name: newName, rpe, curp, cappa, cappi, puesto: cappa, isManualWorker: true });
+    }
+    saveManualWorkers(manual);
+
+    if (puestoNum) {
+        localStorage.setItem(`cfe_puesto_num_${newName}`, puestoNum);
+    }
+
+    mergeWorkersData();
+    const updated = AppState.workers.find(wk => wk.name === newName);
+    if (updated) {
+        selectWorker(updated, false);
+    }
+
+    closeEditActiveWorkerModal();
+    showNotification("Datos del trabajador actualizados.");
+}
+
+// 9. Eliminar Trabajador
+function deleteActiveWorker() {
+    const w = AppState.selectedWorker;
+    if (!w) return;
+    if (!confirm(`¿Estás seguro de eliminar al trabajador "${w.name}" del sistema?`)) return;
+
+    const cleanName = w.name.trim().toUpperCase();
+    let manual = getManualWorkers();
+    manual = manual.filter(mw => mw.name.toUpperCase() !== cleanName);
+    saveManualWorkers(manual);
+
+    // Limpiar claves asociadas
+    localStorage.removeItem(`cfe_manual_courses_${cleanName}`);
+    localStorage.removeItem(`cfe_deleted_courses_${cleanName}`);
+    localStorage.removeItem(`cfe_puesto_num_${cleanName}`);
+    localStorage.removeItem(`cfe_completed_${cleanName}`);
+
+    mergeWorkersData();
+    AppState.selectedWorker = null;
+    AppState.workerCoursesList = [];
+    actWorkerName.textContent = "SELECCIONA UN TRABAJADOR";
+    actWorkerRpeBadge.textContent = "RPE: --";
+    actWorkerCurp.textContent = "--";
+    actWorkerCappa.textContent = "--";
+    actWorkerCappi.textContent = "--";
+    renderCoursesTableForActiveWorker();
+    updateLivePreview("", "", null);
+
+    const manualBadge = document.getElementById('act-worker-manual-badge');
+    if (manualBadge) manualBadge.style.display = 'none';
+    const btnEdit = document.getElementById('btn-edit-active-worker');
+    if (btnEdit) btnEdit.style.display = 'none';
+    const btnDel = document.getElementById('btn-delete-active-worker');
+    if (btnDel) btnDel.style.display = 'none';
+
+    showNotification(`Trabajador "${w.name}" eliminado del sistema.`);
+}
+
+// 10. Generador Express DC-3 Modal
+function openQuickDC3Modal() {
+    const modal = document.getElementById('quick-dc3-modal');
+    if (!modal) return;
+
+    // Llenar picker de trabajadores
+    const picker = document.getElementById('quick-dc3-worker-picker');
+    picker.innerHTML = `<option value="new">+ Escribir Trabajador Nuevo</option>`;
+    AppState.workers.forEach(w => {
+        picker.innerHTML += `<option value="${w.name}">${w.name} (${w.rpe || '--'})</option>`;
+    });
+
+    if (AppState.selectedWorker) {
+        picker.value = AppState.selectedWorker.name;
+        onQuickPickerWorkerChange(AppState.selectedWorker.name);
+    } else {
+        picker.value = 'new';
+        onQuickPickerWorkerChange('new');
+    }
+
+    // Inicializar instructor en Aleatorio
+    const instInput = document.getElementById('quick-c-instructor');
+    if (instInput) instInput.value = "Aleatorio";
+
+    // Inicializar firmantes / jefes con los del trabajador activo o predeterminados
+    const pInput = document.getElementById('quick-patron-rep');
+    const wInput = document.getElementById('quick-worker-rep');
+    const activePatron = (AppState.selectedWorker && localStorage.getItem(`cfe_patron_rep_${AppState.selectedWorker.name}`)) ||
+                         document.getElementById('act-worker-patron-rep')?.value ||
+                         document.getElementById('config-patron-rep')?.value ||
+                         localStorage.getItem('cfe_patron_rep') ||
+                         "JOSE DAVID LOPEZ MEDINA";
+    const activeWorkerRep = (AppState.selectedWorker && localStorage.getItem(`cfe_worker_rep_${AppState.selectedWorker.name}`)) ||
+                            document.getElementById('act-worker-worker-rep')?.value ||
+                            document.getElementById('config-worker-rep')?.value ||
+                            localStorage.getItem('cfe_worker_rep') ||
+                            "JUAN CARLOS SERNA GOMEZ";
+    if (pInput) pInput.value = activePatron;
+    if (wInput) wInput.value = activeWorkerRep;
+
+    // Asignar fechas por defecto
+    assignQuickRandomDate();
+
+    // Inicializar condición de leyenda de regularización
+    const legendCheckbox = document.getElementById('quick-include-legend');
+    if (legendCheckbox) {
+        delete legendCheckbox.dataset.userTouched;
+        const endVal = document.getElementById('quick-c-end')?.value;
+        const endYear = endVal ? new Date(endVal + 'T00:00:00').getFullYear() : 2020;
+        legendCheckbox.checked = (endYear < 2024);
+    }
+
+    // Resetear estado visual de Kardex
+    const statusBox = document.getElementById('quick-kardex-status');
+    const uploadBtn = document.getElementById('btn-quick-kardex-upload');
+    if (statusBox) statusBox.style.display = 'none';
+    if (uploadBtn) {
+        uploadBtn.textContent = 'Cargar Kardex (.xlsx)';
+        uploadBtn.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+    }
+
+    modal.style.display = 'flex';
+}
+
+function closeQuickDC3Modal() {
+    const modal = document.getElementById('quick-dc3-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function handleQuickKardexUpload(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+
+            let selectedSheet = null;
+            let rawRows = [];
+
+            for (const sheetName of workbook.SheetNames) {
+                const sheet = workbook.Sheets[sheetName];
+                let rows = [];
+                if (sheet['!ref']) {
+                    const range = XLSX.utils.decode_range(sheet['!ref']);
+                    range.s.c = 0;
+                    rows = XLSX.utils.sheet_to_json(sheet, { header: 1, range: range });
+                } else {
+                    rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                }
+
+                let hasCourse = false;
+                let hasDate = false;
+                for (let i = 0; i < Math.min(25, rows.length); i++) {
+                    const row = rows[i];
+                    if (row) {
+                        const hasCourseHeader = row.some(cell => {
+                            const val = String(cell || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+                            return val.includes('CURSO') || val.includes('MATERIA') || val.includes('NOMBRE DEL CURSO');
+                        });
+                        const hasDateHeader = row.some(cell => {
+                            const val = String(cell || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+                            return val.includes('FECHA') || (val.includes('ACREDITAC') && !val.includes('MODO')) || val.includes('TERMINO') || val.includes('FIN');
+                        });
+                        if (hasCourseHeader) hasCourse = true;
+                        if (hasDateHeader) hasDate = true;
+                        if (hasCourse && hasDate) break;
+                    }
+                }
+
+                if (hasCourse && hasDate) {
+                    selectedSheet = sheet;
+                    rawRows = rows;
+                    break;
+                }
+            }
+
+            if (!selectedSheet && workbook.SheetNames.length > 0) {
+                selectedSheet = workbook.Sheets[workbook.SheetNames[0]];
+                if (selectedSheet['!ref']) {
+                    const range = XLSX.utils.decode_range(selectedSheet['!ref']);
+                    range.s.c = 0;
+                    rawRows = XLSX.utils.sheet_to_json(selectedSheet, { header: 1, range: range });
+                } else {
+                    rawRows = XLSX.utils.sheet_to_json(selectedSheet, { header: 1 });
+                }
+            }
+
+            const fallbackName = file.name.replace(/\.[^\/.]+$/, "").trim().toUpperCase();
+            const parsed = extractKardexData(rawRows, fallbackName);
+            const workerName = parsed.workerName || fallbackName;
+
+            // Auto-llenar campos en el modal
+            const wNameInput = document.getElementById('quick-w-name');
+            const wRpeInput = document.getElementById('quick-w-rpe');
+            const wCurpInput = document.getElementById('quick-w-curp');
+            const wPuestoInput = document.getElementById('quick-w-puesto');
+
+            if (wNameInput) wNameInput.value = workerName;
+            if (wRpeInput && parsed.rpe) wRpeInput.value = parsed.rpe;
+            if (wCurpInput && parsed.curp) wCurpInput.value = parsed.curp;
+            if (wPuestoInput && parsed.puesto) wPuestoInput.value = parsed.puesto;
+
+            // Si hay cursos en el Kardex, sugerir en datalist y precargar primero si el campo está vacío
+            if (parsed.courses && parsed.courses.length > 0) {
+                const datalist = document.getElementById('common-courses-datalist');
+                parsed.courses.forEach(c => {
+                    if (datalist && c.name) {
+                        const opt = document.createElement('option');
+                        opt.value = c.name;
+                        datalist.appendChild(opt);
+                    }
+                });
+
+                const cNameInput = document.getElementById('quick-c-name');
+                if (cNameInput && !cNameInput.value.trim()) {
+                    cNameInput.value = parsed.courses[0].name;
+                    if (parsed.courses[0].hours) {
+                        document.getElementById('quick-c-hours').value = parsed.courses[0].hours;
+                    }
+                    if (parsed.courses[0].endDate) {
+                        const dStr = parsed.courses[0].endDate.toISOString().split('T')[0];
+                        document.getElementById('quick-c-end').value = dStr;
+                        recalculateQuickDates();
+                    }
+                }
+            }
+
+            // Guardar Kardex en IndexedDB y memoria
+            AppState.historyFiles[workerName] = rawRows;
+            await saveKardexFile(workerName, file.name, rawRows);
+
+            // Registrar o actualizar trabajador en la lista manual
+            let manual = getManualWorkers();
+            let existing = manual.find(w => w.name.toUpperCase() === workerName.toUpperCase());
+            if (!existing) {
+                existing = {
+                    name: workerName,
+                    rpe: parsed.rpe || '9K000',
+                    curp: parsed.curp || '',
+                    cappa: parsed.puesto || 'TRABAJADOR GENERAL',
+                    cappi: '',
+                    puesto: parsed.puesto || 'TRABAJADOR GENERAL',
+                    isManualWorker: true,
+                    requiredCourses: parsed.courses || []
+                };
+                manual.push(existing);
+            } else {
+                if (parsed.rpe) existing.rpe = parsed.rpe;
+                if (parsed.curp) existing.curp = parsed.curp;
+                if (parsed.puesto) {
+                    existing.puesto = parsed.puesto;
+                    existing.cappa = parsed.puesto;
+                }
+                if (parsed.courses && parsed.courses.length > 0) {
+                    existing.requiredCourses = parsed.courses;
+                }
+            }
+            saveManualWorkers(manual);
+            mergeWorkersData();
+
+            // Actualizar indicador visual en el modal
+            const statusBox = document.getElementById('quick-kardex-status');
+            const filenameSpan = document.getElementById('quick-kardex-filename');
+            const uploadBtn = document.getElementById('btn-quick-kardex-upload');
+            if (statusBox && filenameSpan) {
+                filenameSpan.textContent = `${file.name} (${parsed.courses.length} cursos detectados)`;
+                statusBox.style.display = 'block';
+            }
+            if (uploadBtn) {
+                uploadBtn.textContent = 'Kardex Cargado';
+                uploadBtn.style.borderColor = '#10b981';
+            }
+
+            showNotification(`Kardex "${file.name}" cargado y vinculado a "${workerName}" exitosamente.`);
+        } catch (err) {
+            console.error("Error al procesar Kardex en modal express:", err);
+            showNotification(`Error al leer archivo de Kardex: ${err.message}`, true);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+    event.target.value = '';
+}
+
+function varyQuickInstructor() {
+    const input = document.getElementById('quick-c-instructor');
+    if (!input || AppState.instructors.length === 0) return;
+    const randIdx = Math.floor(Math.random() * AppState.instructors.length);
+    input.value = AppState.instructors[randIdx];
+}
+
+function resetQuickJefesDefaults() {
+    const p = document.getElementById('quick-patron-rep');
+    const w = document.getElementById('quick-worker-rep');
+    if (p) p.value = "JOSE DAVID LOPEZ MEDINA";
+    if (w) w.value = "JUAN CARLOS SERNA GOMEZ";
+    showNotification("Firmantes restablecidos a valores predeterminados.");
+}
+
+function onQuickPickerWorkerChange(val) {
+    if (val === 'new') {
+        document.getElementById('quick-w-name').value = '';
+        document.getElementById('quick-w-rpe').value = '';
+        document.getElementById('quick-w-curp').value = '';
+        document.getElementById('quick-w-puesto').value = '';
+        document.getElementById('quick-w-puesto-num').value = '464020200';
+
+        const statusBox = document.getElementById('quick-kardex-status');
+        if (statusBox) statusBox.style.display = 'none';
+    } else {
+        const w = AppState.workers.find(wk => wk.name === val);
+        if (w) {
+            document.getElementById('quick-w-name').value = w.name || '';
+            document.getElementById('quick-w-rpe').value = w.rpe || '';
+            document.getElementById('quick-w-curp').value = w.curp || '';
+            document.getElementById('quick-w-puesto').value = w.cappa || w.puesto || '';
+            const savedP = localStorage.getItem(`cfe_puesto_num_${w.name}`) || '464020200';
+            document.getElementById('quick-w-puesto-num').value = savedP;
+
+            // Cargar jefes asociados si existen
+            const savedPatron = localStorage.getItem(`cfe_patron_rep_${w.name}`);
+            const savedWorkerRep = localStorage.getItem(`cfe_worker_rep_${w.name}`);
+            if (savedPatron && document.getElementById('quick-patron-rep')) {
+                document.getElementById('quick-patron-rep').value = savedPatron;
+            }
+            if (savedWorkerRep && document.getElementById('quick-worker-rep')) {
+                document.getElementById('quick-worker-rep').value = savedWorkerRep;
+            }
+
+            // Verificar si ya tiene Kardex vinculado
+            const statusBox = document.getElementById('quick-kardex-status');
+            const filenameSpan = document.getElementById('quick-kardex-filename');
+            if (AppState.historyFiles && AppState.historyFiles[w.name]) {
+                if (statusBox && filenameSpan) {
+                    filenameSpan.textContent = `Kardex ya vinculado a ${w.name} en el sistema`;
+                    statusBox.style.display = 'block';
+                }
+            } else {
+                if (statusBox) statusBox.style.display = 'none';
+            }
+        }
+    }
+}
+
+function assignQuickRandomDate() {
+    const minY = parseInt(document.getElementById('config-rand-min-year').value) || 2016;
+    const maxY = parseInt(document.getElementById('config-rand-max-year').value) || 2025;
+    const randomDate = generateRandomWeekday(minY, maxY);
+    const dateStr = randomDate.toISOString().split('T')[0];
+    document.getElementById('quick-c-end').value = dateStr;
+    recalculateQuickDates();
+}
+
+function recalculateQuickDates() {
+    const endVal = document.getElementById('quick-c-end').value;
+    const hours = parseInt(document.getElementById('quick-c-hours').value) || 40;
+    if (endVal) {
+        const endDate = new Date(endVal + 'T00:00:00');
+        const startDate = calculateStartDate(endDate, hours);
+        if (startDate) {
+            document.getElementById('quick-c-start').value = startDate.toISOString().split('T')[0];
+        }
+
+        // Si el usuario no ha forzado el checkbox manualmente, sugerir activación si el año es anterior a 2024
+        const legendCheckbox = document.getElementById('quick-include-legend');
+        if (legendCheckbox && !legendCheckbox.dataset.userTouched) {
+            legendCheckbox.checked = (endDate.getFullYear() < 2024);
+        }
+    }
+}
+
+function getQuickDC3Payload() {
+    const wName = document.getElementById('quick-w-name').value.trim().toUpperCase();
+    const wRpe = document.getElementById('quick-w-rpe').value.trim().toUpperCase() || '9K000';
+    const wCurp = document.getElementById('quick-w-curp').value.trim().toUpperCase();
+    const wPuesto = document.getElementById('quick-w-puesto').value.trim().toUpperCase() || 'TRABAJADOR GENERAL';
+    const wPuestoNum = document.getElementById('quick-w-puesto-num').value.trim() || '464020200';
+
+    const cName = document.getElementById('quick-c-name').value.trim().toUpperCase();
+    const cHours = parseInt(document.getElementById('quick-c-hours').value) || 40;
+    const cType = document.getElementById('quick-c-type').value;
+    const cEndVal = document.getElementById('quick-c-end').value;
+    const cStartVal = document.getElementById('quick-c-start').value;
+    const cInstVal = document.getElementById('quick-c-instructor').value;
+    const legendCheckbox = document.getElementById('quick-include-legend');
+    const includeLegend = legendCheckbox ? legendCheckbox.checked : false;
+
+    if (!wName) {
+        showNotification("Ingresa el nombre del trabajador.", true);
+        return null;
+    }
+    if (!cName) {
+        showNotification("Ingresa el nombre del curso.", true);
+        return null;
+    }
+    if (!cEndVal) {
+        showNotification("Selecciona una fecha de término para el curso.", true);
+        return null;
+    }
+
+    const endDate = new Date(cEndVal + 'T00:00:00');
+    const startDate = cStartVal ? new Date(cStartVal + 'T00:00:00') : calculateStartDate(endDate, cHours);
+
+    // Instructor: soporte para Aleatorio o personalizado libre
+    let instructorName = (cInstVal || '').trim();
+    if (!instructorName || instructorName.toLowerCase().includes('aleatorio') || instructorName.toLowerCase() === 'random') {
+        const randIdx = Math.floor(Math.random() * AppState.instructors.length);
+        instructorName = AppState.instructors[randIdx] || 'MARCELA TALAVERA NEIRA';
+    } else {
+        instructorName = instructorName.toUpperCase();
+        if (!AppState.instructors.includes(instructorName)) {
+            AppState.instructors.push(instructorName);
+            localStorage.setItem('cfe_instructors_catalog', JSON.stringify(AppState.instructors));
+            updateInstructorsDatalist();
+        }
+    }
+
+    // Firmantes / Jefes: predeterminados o personalizados
+    const patronRep = document.getElementById('quick-patron-rep')?.value.trim().toUpperCase() ||
+                      document.getElementById('act-worker-patron-rep')?.value ||
+                      document.getElementById('config-patron-rep')?.value ||
+                      localStorage.getItem('cfe_patron_rep') ||
+                      "JOSE DAVID LOPEZ MEDINA";
+
+    const workerRep = document.getElementById('quick-worker-rep')?.value.trim().toUpperCase() ||
+                      document.getElementById('act-worker-worker-rep')?.value ||
+                      document.getElementById('config-worker-rep')?.value ||
+                      localStorage.getItem('cfe_worker_rep') ||
+                      "JUAN CARLOS SERNA GOMEZ";
+
+    const workerObj = {
+        name: wName,
+        rpe: wRpe,
+        curp: wCurp,
+        cappa: wPuesto,
+        cappi: '',
+        puesto: wPuesto,
+        puestoNum: wPuestoNum
+    };
+
+    const courseObj = {
+        name: cName,
+        hours: cHours,
+        area: '2600-EDUCACION',
+        puestoType: cType,
+        bateria: '',
+        instructorMode: 'manual',
+        randomInstructor: instructorName,
+        manualInstructor: instructorName,
+        endDate: endDate,
+        startDate: startDate
+    };
+
+    return {
+        worker: workerObj,
+        course: courseObj,
+        puestoNum: wPuestoNum,
+        patronRep: patronRep,
+        workerRep: workerRep,
+        includeLegend: includeLegend
+    };
+}
+
+async function quickDC3DownloadDirect() {
+    const payload = getQuickDC3Payload();
+    if (!payload) return;
+
+    ensureTemplateLoaded();
+    if (!AppState.templateFile) {
+        showNotification("Plantilla de Word no disponible.", true);
+        return;
+    }
+
+    playSound('generate');
+    try {
+        const hasLegend = payload.includeLegend !== undefined ? payload.includeLegend : (payload.course.endDate && payload.course.endDate.getFullYear() <= 2021);
+        const zipContent = preprocessTemplateXml(AppState.templateFile, hasLegend, false);
+        const doc = createDocxtemplaterInstance(zipContent);
+
+        // Armar contexto temporal con firmantes personalizados o predeterminados
+        const patronRep = payload.patronRep || "JOSE DAVID LOPEZ MEDINA";
+        const workerRep = payload.workerRep || "JUAN CARLOS SERNA GOMEZ";
+        const companyName = document.getElementById('config-company').value || localStorage.getItem('cfe_company') || "COMISIÓN FEDERAL DE ELECTRICIDAD";
+
+        const ctx = {
+            NOMBRE: formatSurnamesFirst(payload.worker.name).toUpperCase(),
+            PUESTO: payload.worker.puesto.toUpperCase(),
+            NUMEROPUESTO: payload.puestoNum,
+            CURSO: payload.course.name.toUpperCase(),
+            DURACION: String(payload.course.hours),
+            INSTRUCTOR: payload.course.manualInstructor.toUpperCase(),
+
+            nombre: formatSurnamesFirst(payload.worker.name).toUpperCase(),
+            puesto: payload.worker.puesto.toUpperCase(),
+            curso: payload.course.name.toUpperCase(),
+            duracion: String(payload.course.hours),
+            instructor: payload.course.manualInstructor.toUpperCase(),
+            patron_rep: patronRep.toUpperCase(),
+            worker_rep: workerRep.toUpperCase(),
+            razon_social: companyName.toUpperCase(),
+            PATRON: patronRep.toUpperCase(),
+            REPRESENTANTE: workerRep.toUpperCase(),
+            PATRON_REP: patronRep.toUpperCase(),
+            WORKER_REP: workerRep.toUpperCase(),
+            RAZON_SOCIAL: companyName.toUpperCase(),
+            REPRESENTANTE_PATRON: patronRep.toUpperCase(),
+            REPRESENTANTE_TRABAJADOR: workerRep.toUpperCase(),
+            REPRESENTANTE_TRABAJADORES: workerRep.toUpperCase(),
+            EMPRESA: companyName.toUpperCase(),
+            fecha_inicio: formatDateSpanish(payload.course.startDate),
+            fecha_fin: formatDateSpanish(payload.course.endDate),
+            hasLegend: hasLegend
+        };
+
+        const curpUpper = (payload.worker.curp || '').toUpperCase();
+        for (let i = 1; i <= 18; i++) {
+            ctx[`CURP${i}`] = curpUpper[i - 1] || '';
+            ctx[`c${i - 1}`] = curpUpper[i - 1] || '';
+        }
+
+        const sy = payload.course.startDate ? String(payload.course.startDate.getFullYear()) : '';
+        const sm = payload.course.startDate ? String(payload.course.startDate.getMonth() + 1).padStart(2, '0') : '';
+        const sd = payload.course.startDate ? String(payload.course.startDate.getDate()).padStart(2, '0') : '';
+        ctx['AÑO1'] = sy[0] || ''; ctx['AÑO2'] = sy[1] || ''; ctx['AÑO3'] = sy[2] || ''; ctx['AÑO4'] = sy[3] || '';
+        ctx['MES1'] = sm[0] || ''; ctx['MES2'] = sm[1] || '';
+        ctx['DIA1'] = sd[0] || ''; ctx['DIA2'] = sd[1] || '';
+        ctx['sy0'] = sy[0] || ''; ctx['sy1'] = sy[1] || ''; ctx['sy2'] = sy[2] || ''; ctx['sy3'] = sy[3] || '';
+        ctx['sm0'] = sm[0] || ''; ctx['sm1'] = sm[1] || '';
+        ctx['sd0'] = sd[0] || ''; ctx['sd1'] = sd[1] || '';
+
+        const ey = payload.course.endDate ? String(payload.course.endDate.getFullYear()) : '';
+        const em = payload.course.endDate ? String(payload.course.endDate.getMonth() + 1).padStart(2, '0') : '';
+        const ed = payload.course.endDate ? String(payload.course.endDate.getDate()).padStart(2, '0') : '';
+        ctx['AÑO5'] = ey[0] || ''; ctx['AÑO6'] = ey[1] || ''; ctx['AÑO7'] = ey[2] || ''; ctx['AÑO8'] = ey[3] || '';
+        ctx['MES3'] = em[0] || ''; ctx['MES4'] = em[1] || '';
+        ctx['DIA3'] = ed[0] || ''; ctx['DIA4'] = ed[1] || '';
+        ctx['ey0'] = ey[0] || ''; ctx['ey1'] = ey[1] || ''; ctx['ey2'] = ey[2] || ''; ctx['ey3'] = ey[3] || '';
+        ctx['em0'] = em[0] || ''; ctx['em1'] = em[1] || '';
+        ctx['ed0'] = ed[0] || ''; ctx['ed1'] = ed[1] || '';
+
+        doc.setData(ctx);
+        doc.render();
+        const out = doc.getZip().generate({
+            type: "blob",
+            mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        });
+
+        const cleanWorker = formatSurnamesFirst(payload.worker.name);
+        const cleanCourse = cleanCourseName(payload.course.name).substring(0, 30);
+        saveAs(out, `DC3_EXPRESS_${cleanWorker}_${cleanCourse}.docx`);
+        showNotification(`Constancia DC-3 generada y descargada.`);
+    } catch (err) {
+        console.error("Error al generar DC-3 Express:", err);
+        showNotification("Error al generar el archivo Word.", true);
+    }
+}
+
+function quickDC3SaveToSystem() {
+    const payload = getQuickDC3Payload();
+    if (!payload) return;
+
+    const wName = payload.worker.name;
+    let manual = getManualWorkers();
+    let existingWorker = manual.find(w => w.name.toUpperCase() === wName);
+
+    if (!existingWorker) {
+        existingWorker = {
+            name: wName,
+            rpe: payload.worker.rpe,
+            curp: payload.worker.curp,
+            cappa: payload.worker.cappa,
+            cappi: '',
+            puesto: payload.worker.puesto,
+            isManualWorker: true,
+            requiredCourses: []
+        };
+        manual.push(existingWorker);
+        saveManualWorkers(manual);
+    }
+
+    if (payload.puestoNum) {
+        localStorage.setItem(`cfe_puesto_num_${wName}`, payload.puestoNum);
+    }
+
+    if (payload.patronRep) {
+        localStorage.setItem(`cfe_patron_rep_${wName}`, payload.patronRep);
+    }
+    if (payload.workerRep) {
+        localStorage.setItem(`cfe_worker_rep_${wName}`, payload.workerRep);
+    }
+
+    // Agregar curso
+    const cleanName = wName.trim().toUpperCase();
+    const manualKey = `cfe_manual_courses_${cleanName}`;
+    let manualCourses = JSON.parse(localStorage.getItem(manualKey)) || [];
+
+    const isDup = manualCourses.some(c => c.name.toUpperCase() === payload.course.name.toUpperCase() && c.puestoType === payload.course.puestoType);
+    if (!isDup) {
+        manualCourses.push({
+            name: payload.course.name,
+            hours: payload.course.hours,
+            area: payload.course.area,
+            puestoType: payload.course.puestoType
+        });
+        localStorage.setItem(manualKey, JSON.stringify(manualCourses));
+    }
+
+    // Guardar estado del curso (fechas e instructor)
+    const cleanCourse = cleanCourseName(payload.course.name);
+    const stateKey = `cfe_course_state_${cleanName}_${cleanCourse}_${payload.course.puestoType}_`;
+    localStorage.setItem(stateKey, JSON.stringify({
+        endDate: payload.course.endDate ? payload.course.endDate.toISOString().split('T')[0] : null,
+        startDate: payload.course.startDate ? payload.course.startDate.toISOString().split('T')[0] : null,
+        instructorMode: 'manual',
+        manualInstructor: payload.course.manualInstructor,
+        selected: true,
+        hours: payload.course.hours,
+        hasLegend: payload.includeLegend
+    }));
+
+    mergeWorkersData();
+    const found = AppState.workers.find(w => w.name === wName);
+    if (found) {
+        selectWorker(found);
+    }
+
+    closeQuickDC3Modal();
+    switchTab('tab-generate');
+    showNotification(`Trabajador "${wName}" y curso guardados en el sistema.`);
 }
 
 // Page setup onload
